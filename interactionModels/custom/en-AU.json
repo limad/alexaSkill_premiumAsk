@@ -1,0 +1,256 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": [
+            "yes",
+            "yeah",
+            "yep",
+            "ok",
+            "okay",
+            "sure",
+            "right",
+            "exact",
+            "affirmative",
+            "totally",
+            "valid"
+          ]
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": [
+            "no",
+            "nope",
+            "not at all",
+            "negative",
+            "never",
+            "no thanks",
+            "no way",
+            "cancel"
+          ]
+        },
+        {
+          "name": "AMAZON.RepeatIntent",
+          "samples": [
+            "repeat",
+            "say again",
+            "again",
+            "i did not catch that",
+            "pardon"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Strings",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "String",
+          "samples": [
+            "it is {Strings}",
+            "i say {Strings}",
+            "the answer is {Strings}",
+            "my answer is {Strings}",
+            "say {Strings}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Selections",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "Select",
+          "samples": [
+            "the {Selections}",
+            "i choose {Selections}",
+            "select {Selections}",
+            "pick {Selections}",
+            "choose {Selections}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Numbers",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "name": "Number",
+          "samples": [
+            "{Numbers}",
+            "it is {Numbers}",
+            "the number {Numbers}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Durations",
+              "type": "AMAZON.DURATION"
+            }
+          ],
+          "name": "Duration",
+          "samples": [
+            "{Durations}",
+            "for {Durations}",
+            "during {Durations}",
+            "for a duration of {Durations}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Dates",
+              "type": "AMAZON.DATE"
+            },
+            {
+              "name": "Times",
+              "type": "AMAZON.TIME"
+            }
+          ],
+          "name": "Date",
+          "samples": [
+            "{Dates}",
+            "at {Times}",
+            "on {Dates}",
+            "for {Dates}",
+            "for {Times}",
+            "{Dates} at {Times}",
+            "on {Dates} at {Times}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Command",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "VoiceLaunch",
+          "samples": [
+            "launch {Command}",
+            "start {Command}",
+            "run {Command}",
+            "execute {Command}",
+            "trigger {Command}",
+            "activate {Command}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Command",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "VoiceTurnOn",
+          "samples": [
+            "turn on {Command}",
+            "switch on {Command}",
+            "open {Command}",
+            "raise {Command}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Command",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "VoiceTurnOff",
+          "samples": [
+            "turn off {Command}",
+            "switch off {Command}",
+            "close {Command}",
+            "stop {Command}",
+            "shut {Command}",
+            "lower {Command}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Command",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "VoiceSet",
+          "samples": [
+            "set {Command}",
+            "make {Command}",
+            "configure {Command}",
+            "adjust {Command}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Query",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "name": "VoiceQuery",
+          "samples": [
+            "what is {Query}",
+            "what's {Query}",
+            "what is the {Query}",
+            "what's the {Query}",
+            "tell me {Query}",
+            "tell me the {Query}",
+            "give me {Query}",
+            "give me the {Query}",
+            "how much is {Query}",
+            "what about {Query}",
+            "what is the temperature of {Query}"
+          ]
+        },
+        {
+          "slots": [
+            {
+              "name": "Choice",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "name": "DisambiguationIntent",
+          "samples": [
+            "the {Choice}",
+            "number {Choice}",
+            "option {Choice}",
+            "choice {Choice}",
+            "i pick {Choice}",
+            "i want number {Choice}",
+            "i choose {Choice}"
+          ]
+        }
+      ],
+      "types": [],
+      "invocationName": "jeedom"
+    }
+  }
+}

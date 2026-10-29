@@ -1,0 +1,67 @@
+name: Skill CI
+
+on:
+  push:
+    branches: [beta, main, master]
+  pull_request:
+    branches: [beta, main, master]
+
+jobs:
+  python-tests:
+    name: Lambda tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install deps
+        # urllib3 est requis par lambda_function.py (import direct). ask-sdk N'EST
+        # PAS installé : le conftest monte des stubs minimaux (_ensure_ask_sdk_mocks).
+        run: pip install pytest urllib3
+
+      - name: Syntax check
+        run: python -c "import ast; ast.parse(open('lambda/lambda_function.py').read()); print('OK')"
+
+      - name: Run pytest
+        run: python -m pytest lambda/test/ -v --tb=short
+
+  json-validate:
+    name: Validate interaction models JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON
+        run: |
+          for f in interactionModels/custom/*.json skill-package/skill.json; do
+            [ -f "$f" ] || continue
+            python -m json.tool "$f" > /dev/null && echo "✓ $f" || { echo "✗ $f"; exit 1; }
+          done
+
+  manifest-check:
+    name: Skill manifest sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check skill manifest
+        run: |
+          if [ -f skill-package/skill.json ]; then
+            python -c "
+          import json
+          m = json.load(open('skill-package/skill.json'))
+          assert 'manifest' in m, 'manifest key missing'
+          assert m['manifest'].get('publishingInformation'), 'publishingInformation missing'
+          assert m['manifest'].get('apis', {}).get('custom'), 'custom API not declared'
+          print('manifest OK')
+          "
+          else
+            echo "skill.json absent — skip"
+          fi
