@@ -150,6 +150,9 @@ def test_voice_free_intent_is_bare_person_slot(locale):
     assert "DisambiguationIntent" not in intents, f"{locale}: DisambiguationIntent capte les questions libres"
     # « à quelle heure… » / « pour combien de temps… » : réponses date/durée reçues en texte
     assert not ({"Date", "Duration"} & set(intents)), f"{locale}: Date/Duration captent les questions libres"
+    # « le deuxième » / « the second one » : ordinal capté par Number
+    assert {"name": "Ordinal", "type": "AMAZON.Ordinal"} in intents["Number"]["slots"], \
+        f"{locale}/Number: slot Ordinal absent"
     intent = intents["VoiceFree"]
     assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
     assert intent["samples"] == ["{Query}"]

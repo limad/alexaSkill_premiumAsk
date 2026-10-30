@@ -93,6 +93,10 @@
                         {
                             "name": "Numbers",
                             "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "Ordinal",
+                            "type": "AMAZON.Ordinal"
                         }
                     ],
                     "name": "Number",
@@ -100,7 +104,9 @@
                         "{Numbers}",
                         "es {Numbers}",
                         "el número {Numbers}",
-                        "número {Numbers}"
+                        "número {Numbers}",
+                        "el {Ordinal}",
+                        "la {Ordinal}"
                     ]
                 },
                 {

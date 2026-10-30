@@ -134,6 +134,17 @@ def test_number_with_pending_options_resolves_choice(lambda_mod):
         inst.post_jee_event.assert_not_called()
 
 
+def test_ordinal_with_pending_options_resolves_choice(lambda_mod):
+    hi = _make_handler_input(None, session_new=False)
+    hi._intent_name = "Number"
+    hi._slots = {"Ordinal": "2"}
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["allume le salon", "allume le salon TV"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.NumericIntentHandler().handle(hi)
+        inst.post_voice_command.assert_called_once_with("allume le salon TV", force_exact=True)
+
+
 # ── Relance HTTP : jamais sur POST (évite d'exécuter deux fois une commande) ──
 
 def test_retry_never_replays_post(lambda_mod):

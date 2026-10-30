@@ -95,6 +95,10 @@
                         {
                             "name": "Numbers",
                             "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "Ordinal",
+                            "type": "AMAZON.Ordinal"
                         }
                     ],
                     "name": "Number",
@@ -102,7 +106,9 @@
                         "{Numbers}",
                         "it is {Numbers}",
                         "the number {Numbers}",
-                        "number {Numbers}"
+                        "number {Numbers}",
+                        "the {Ordinal}",
+                        "the {Ordinal} one"
                     ]
                 },
                 {

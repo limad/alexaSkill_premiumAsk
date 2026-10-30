@@ -829,14 +829,15 @@ class NumericIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("Numeric Intent")
-        # Réponse « deux » à une désambiguïsation en cours
+        # « deux » (Numbers) ou « le deuxième » (Ordinal, AMAZON.Ordinal → "2")
+        number = get_slot_value(handler_input, "Numbers") or get_slot_value(handler_input, "Ordinal")
+        # Réponse à une désambiguïsation en cours
         if handler_input.attributes_manager.session_attributes.get("pending_voice_options"):
-            return _resolve_voice_choice(handler_input, get_slot_value(handler_input, "Numbers"))
+            return _resolve_voice_choice(handler_input, number)
         jee = JeeAsk(handler_input)
         guard = _qa_guard_no_question(handler_input, jee, "Numeric")
         if guard is not None:
             return guard
-        number = get_slot_value(handler_input, "Numbers")
         if number in (None, "", "?"):
             jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
             data = handler_input.attributes_manager.request_attributes.get("_", {})
