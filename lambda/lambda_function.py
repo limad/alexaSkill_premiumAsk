@@ -713,6 +713,34 @@ class VoiceQueryIntentHandler(AbstractRequestHandler):
         return _handle_voice_intent(handler_input, "VoiceQuery")
 
 
+class VoiceFreeIntentHandler(AbstractRequestHandler):
+    """
+    Intent fourre-tout (essai fr-FR) : sample "{Query}" seul, slot AMAZON.Person,
+    qui reçoit la phrase entière. Remplace les intents Voice* du modèle concerné.
+    Une question Jeedom n'est attendue que dans une session déjà ouverte (le Q/A
+    démarre par un LaunchRequest) : la phrase y vaut alors réponse libre (String).
+    """
+    def can_handle(self, handler_input):
+        return is_intent_name("VoiceFree")(handler_input)
+
+    def handle(self, handler_input):
+        query = (get_slot_value(handler_input, "Query") or "").strip()
+        if not query:
+            data = handler_input.attributes_manager.request_attributes.get("_", {})
+            return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre commande."))
+
+        session = getattr(handler_input.request_envelope, "session", None)
+        if session is not None and getattr(session, "new", True) is False:
+            jee = JeeAsk(handler_input)
+            if isinstance(jee.jee_state, QuestionState):
+                logger.info("VoiceFree en Q/A → réponse libre")
+                return _handle_qa_response(handler_input, jee, jee.post_jee_event(query, RESPONSE_STRING))
+
+        locale_short = _locale_short(handler_input)
+        logger.info("VoiceFree[%s]: %s", locale_short, query)
+        return _dispatch_voice_query(handler_input, query, locale_short)
+
+
 class YesIntentHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
         return is_intent_name("AMAZON.YesIntent")(handler_input)
@@ -1016,6 +1044,7 @@ sb.add_request_handler(VoiceTurnOnIntentHandler())
 sb.add_request_handler(VoiceTurnOffIntentHandler())
 sb.add_request_handler(VoiceSetIntentHandler())
 sb.add_request_handler(VoiceQueryIntentHandler())
+sb.add_request_handler(VoiceFreeIntentHandler())
 sb.add_request_handler(DisambiguationIntentHandler())
 sb.add_request_handler(YesIntentHandler())
 sb.add_request_handler(NoIntentHandler())

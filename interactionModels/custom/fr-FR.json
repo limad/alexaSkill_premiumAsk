@@ -149,126 +149,15 @@
                     ]
                 },
                 {
-                    "slots": [
-                        {
-                            "name": "Command",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "VoiceLaunch",
-                    "samples": [
-                        "lance {Command}",
-                        "active {Command}",
-                        "démarre {Command}",
-                        "demarre {Command}",
-                        "exécute {Command}",
-                        "execute {Command}",
-                        "déclenche {Command}",
-                        "declenche {Command}",
-                        "lancer {Command}",
-                        "activer {Command}",
-                        "démarrer {Command}",
-                        "exécuter {Command}",
-                        "déclencher {Command}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Command",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "VoiceTurnOn",
-                    "samples": [
-                        "allume {Command}",
-                        "ouvre {Command}",
-                        "monte {Command}",
-                        "allumer {Command}",
-                        "ouvrir {Command}",
-                        "monter {Command}",
-                        "allume le {Command}",
-                        "allume la {Command}",
-                        "allume l' {Command}",
-                        "allume les {Command}",
-                        "ouvre le {Command}",
-                        "ouvre la {Command}",
-                        "ouvre l' {Command}",
-                        "ouvre les {Command}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Command",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "VoiceTurnOff",
-                    "samples": [
-                        "éteins {Command}",
-                        "eteins {Command}",
-                        "ferme {Command}",
-                        "arrête {Command}",
-                        "arrete {Command}",
-                        "coupe {Command}",
-                        "descends {Command}",
-                        "éteindre {Command}",
-                        "eteindre {Command}",
-                        "fermer {Command}",
-                        "arrêter {Command}",
-                        "couper {Command}",
-                        "descendre {Command}",
-                        "éteins le {Command}",
-                        "éteins la {Command}",
-                        "éteins l' {Command}",
-                        "éteins les {Command}",
-                        "ferme le {Command}",
-                        "ferme la {Command}",
-                        "ferme l' {Command}",
-                        "ferme les {Command}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Command",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "VoiceSet",
-                    "samples": [
-                        "mets {Command}",
-                        "fais {Command}",
-                        "règle {Command}",
-                        "regle {Command}",
-                        "configure {Command}",
-                        "mettre {Command}",
-                        "faire {Command}",
-                        "régler {Command}",
-                        "configurer {Command}"
-                    ]
-                },
-                {
+                    "name": "VoiceFree",
                     "slots": [
                         {
                             "name": "Query",
-                            "type": "AMAZON.SearchQuery"
+                            "type": "AMAZON.Person"
                         }
                     ],
-                    "name": "VoiceQuery",
                     "samples": [
-                        "quelle est {Query}",
-                        "quel est {Query}",
-                        "quelle est l' {Query}",
-                        "quel est l' {Query}",
-                        "dis-moi {Query}",
-                        "dis-moi l' {Query}",
-                        "donne-moi {Query}",
-                        "donne-moi l' {Query}",
-                        "combien fait {Query}",
-                        "c'est quoi {Query}",
-                        "c'est quoi l' {Query}"
+                        "{Query}"
                     ]
                 },
                 {

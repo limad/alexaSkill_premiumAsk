@@ -43,6 +43,17 @@ REQUIRED_INTENTS = {
     "DisambiguationIntent",
 }
 
+VOICE_INTENTS = {"VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet", "VoiceQuery"}
+
+# Locales en essai « intent fourre-tout » : VoiceFree remplace les intents Voice*
+FREE_QUERY_LOCALES = {"fr-FR"}
+
+
+def _required_intents(locale: str) -> set:
+    if locale in FREE_QUERY_LOCALES:
+        return (REQUIRED_INTENTS - VOICE_INTENTS) | {"VoiceFree"}
+    return REQUIRED_INTENTS
+
 MODELS_DIR = Path(__file__).parent.parent.parent / "interactionModels" / "custom"
 
 
@@ -79,7 +90,7 @@ def test_invocation_name_lowercase_alphanumeric(locale):
 def test_all_required_intents_present(locale):
     model = _load_model(locale)
     intents = _intents_by_name(model)
-    missing = REQUIRED_INTENTS - set(intents.keys())
+    missing = _required_intents(locale) - set(intents.keys())
     assert not missing, f"{locale}: intents manquants {missing}"
 
 
@@ -89,6 +100,8 @@ def test_voice_intents_have_searchquery_carrier_phrases(locale):
     AMAZON.SearchQuery exige une carrier phrase (verbe avant le slot).
     Échec courant : sample = "{Command}" seul → rejet par Amazon au build.
     """
+    if locale in FREE_QUERY_LOCALES:
+        pytest.skip("intents Voice* remplacés par VoiceFree")
     intents = _intents_by_name(_load_model(locale))
     for name in ("VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet"):
         intent = intents[name]
@@ -107,6 +120,8 @@ def test_voice_intents_have_searchquery_carrier_phrases(locale):
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
 def test_voice_query_intent_uses_query_slot(locale):
     """VoiceQuery doit utiliser le slot Query lu par lambda_function.py."""
+    if locale in FREE_QUERY_LOCALES:
+        pytest.skip("intents Voice* remplacés par VoiceFree")
     intents = _intents_by_name(_load_model(locale))
     intent = intents["VoiceQuery"]
     assert intent.get("slots"), f"{locale}/VoiceQuery: pas de slot"
@@ -118,6 +133,16 @@ def test_voice_query_intent_uses_query_slot(locale):
         assert "{Query}" in sample, f"{locale}/VoiceQuery: sample sans {{Query}}: {sample}"
         before = sample.split("{Query}")[0].strip()
         assert before, f"{locale}/VoiceQuery: sample sans carrier phrase: '{sample}'"
+
+
+@pytest.mark.parametrize("locale", sorted(FREE_QUERY_LOCALES))
+def test_voice_free_intent_is_bare_person_slot(locale):
+    """VoiceFree : sample "{Query}" seul, slot AMAZON.Person (reçoit la phrase entière)."""
+    intents = _intents_by_name(_load_model(locale))
+    assert not (VOICE_INTENTS & set(intents)), f"{locale}: intents Voice* encore présents"
+    intent = intents["VoiceFree"]
+    assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
+    assert intent["samples"] == ["{Query}"]
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
@@ -172,6 +197,8 @@ def test_voice_intent_samples_distinct_across_intents(locale):
     Les verbes carriers de Voice* doivent être différenciés sinon collision NLU
     (ex: "allume X" doit être seulement dans VoiceTurnOn, pas aussi VoiceLaunch).
     """
+    if locale in FREE_QUERY_LOCALES:
+        pytest.skip("intents Voice* remplacés par VoiceFree")
     intents = _intents_by_name(_load_model(locale))
     voice_names = ("VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet")
     samples_by_intent = {n: set(s.lower() for s in intents[n].get("samples", [])) for n in voice_names}
