@@ -164,7 +164,12 @@
             "exécute {Command}",
             "execute {Command}",
             "déclenche {Command}",
-            "declenche {Command}"
+            "declenche {Command}",
+            "lancer {Command}",
+            "activer {Command}",
+            "démarrer {Command}",
+            "exécuter {Command}",
+            "déclencher {Command}"
           ]
         },
         {
@@ -178,7 +183,18 @@
           "samples": [
             "allume {Command}",
             "ouvre {Command}",
-            "monte {Command}"
+            "monte {Command}",
+            "allumer {Command}",
+            "ouvrir {Command}",
+            "monter {Command}",
+            "allume le {Command}",
+            "allume la {Command}",
+            "allume l\u0027 {Command}",
+            "allume les {Command}",
+            "ouvre le {Command}",
+            "ouvre la {Command}",
+            "ouvre l\u0027 {Command}",
+            "ouvre les {Command}"
           ]
         },
         {
@@ -197,7 +213,20 @@
             "arrête {Command}",
             "arrete {Command}",
             "coupe {Command}",
-            "descends {Command}"
+            "descends {Command}",
+            "éteindre {Command}",
+            "fermer {Command}",
+            "arrêter {Command}",
+            "couper {Command}",
+            "descendre {Command}",
+            "éteins le {Command}",
+            "éteins la {Command}",
+            "éteins l\u0027 {Command}",
+            "éteins les {Command}",
+            "ferme le {Command}",
+            "ferme la {Command}",
+            "ferme l\u0027 {Command}",
+            "ferme les {Command}"
           ]
         },
         {
@@ -213,7 +242,11 @@
             "fais {Command}",
             "règle {Command}",
             "regle {Command}",
-            "configure {Command}"
+            "configure {Command}",
+            "mettre {Command}",
+            "faire {Command}",
+            "régler {Command}",
+            "configurer {Command}"
           ]
         },
         {
@@ -260,7 +293,7 @@
         }
       ],
       "types": [],
-      "invocationName": "jeedom"
+      "invocationName": "mon jeedom"
     }
   }
 }

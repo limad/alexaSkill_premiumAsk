@@ -293,7 +293,7 @@
                 }
             ],
             "types": [],
-            "invocationName": "jeedom"
+            "invocationName": "mon jeedom"
         }
     }
 }
