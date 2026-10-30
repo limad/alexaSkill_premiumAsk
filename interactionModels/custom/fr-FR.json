@@ -106,38 +106,6 @@
                     ]
                 },
                 {
-                    "slots": [
-                        {
-                            "name": "Durations",
-                            "type": "AMAZON.DURATION"
-                        }
-                    ],
-                    "name": "Duration",
-                    "samples": [
-                        "pendant {Durations}",
-                        "pour {Durations}",
-                        "durant {Durations}",
-                        "pour une durée de {Durations}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Dates",
-                            "type": "AMAZON.DATE"
-                        },
-                        {
-                            "name": "Times",
-                            "type": "AMAZON.TIME"
-                        }
-                    ],
-                    "name": "Date",
-                    "samples": [
-                        "pour le {Dates}",
-                        "le {Dates} à {Times}"
-                    ]
-                },
-                {
                     "name": "VoiceFree",
                     "slots": [
                         {

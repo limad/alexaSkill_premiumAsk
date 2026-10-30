@@ -142,6 +142,8 @@ def test_voice_free_intent_is_bare_person_slot(locale):
     intents = _intents_by_name(_load_model(locale))
     assert not (VOICE_INTENTS & set(intents)), f"{locale}: intents Voice* encore présents"
     assert "DisambiguationIntent" not in intents, f"{locale}: DisambiguationIntent capte les questions libres"
+    # « à quelle heure… » / « pour combien de temps… » : réponses date/durée reçues en texte
+    assert not ({"Date", "Duration"} & set(intents)), f"{locale}: Date/Duration captent les questions libres"
     intent = intents["VoiceFree"]
     assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
     assert intent["samples"] == ["{Query}"]
