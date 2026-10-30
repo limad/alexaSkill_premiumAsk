@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Affichage APL (Echo Show, Echo Spot, Fire TV) : le texte de chaque réponse
 parlée est aussi affiché à l'écran, avec la phrase de l'utilisateur en titre.
