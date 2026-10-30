@@ -145,6 +145,13 @@ def test_voice_free_intent_is_bare_person_slot(locale):
     intent = intents["VoiceFree"]
     assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
     assert intent["samples"] == ["{Query}"]
+    # Un autre exemple réduit au seul slot capterait les phrases libres (sauf Number,
+    # gardé pour répondre « deux » à un choix)
+    for name, it in intents.items():
+        if name in ("VoiceFree", "Number"):
+            continue
+        bare = [s for s in it.get("samples", []) if re.fullmatch(r"\{\w+\}", s)]
+        assert not bare, f"{locale}/{name}: exemple nu {bare}"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)

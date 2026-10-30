@@ -116,7 +116,6 @@
                     ],
                     "name": "Duration",
                     "samples": [
-                        "{Durations}",
                         "pendant {Durations}",
                         "pour {Durations}",
                         "durant {Durations}",
@@ -136,7 +135,6 @@
                     ],
                     "name": "Date",
                     "samples": [
-                        "{Dates}",
                         "à {Times}",
                         "le {Dates}",
                         "pour le {Dates}",
