@@ -662,6 +662,13 @@ _CHOICE_WORDS = {
     "troisième": 3, "trois": 3,
     "quatrième": 4, "quatre": 4,
     "cinquième": 5, "cinq": 5,
+    # en
+    "first": 1, "one": 1, "two": 2, "third": 3, "three": 3,
+    "fourth": 4, "four": 4, "fifth": 5, "five": 5,
+    # es
+    "primero": 1, "primera": 1, "uno": 1, "segundo": 2, "segunda": 2, "dos": 2,
+    "tercero": 3, "tercera": 3, "tres": 3, "cuarto": 4, "cuarta": 4, "cuatro": 4,
+    "quinto": 5, "quinta": 5, "cinco": 5,
 }
 
 
@@ -752,7 +759,7 @@ class VoiceQueryIntentHandler(AbstractRequestHandler):
 
 class VoiceFreeIntentHandler(AbstractRequestHandler):
     """
-    Intent fourre-tout (essai fr-FR) : sample "{Query}" seul, slot AMAZON.Person,
+    Intent fourre-tout (fr-FR, en-US, es-ES) : sample "{Query}" seul, slot AMAZON.Person,
     qui reçoit la phrase entière. Remplace les intents Voice* du modèle concerné.
     Une question Jeedom n'est attendue que dans une session déjà ouverte (le Q/A
     démarre par un LaunchRequest) : la phrase y vaut alors réponse libre (String).

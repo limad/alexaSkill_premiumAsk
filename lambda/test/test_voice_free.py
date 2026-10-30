@@ -96,6 +96,8 @@ def test_empty_query_says_no_match(lambda_mod):
 @pytest.mark.parametrize("text,expected", [
     ("le deuxième", 2), ("la première", 1), ("numéro 3", 3), ("deux", 2),
     ("allume la lumière", None), ("", None),
+    ("the second one", 2), ("number 3", 3), ("el segundo", 2), ("la tercera", 3),
+    ("turn on the light", None), ("enciende la luz", None),
 ])
 def test_parse_choice(lambda_mod, text, expected):
     assert lambda_mod._parse_choice(text) == expected

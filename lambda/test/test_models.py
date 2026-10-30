@@ -45,8 +45,8 @@ REQUIRED_INTENTS = {
 
 VOICE_INTENTS = {"VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet", "VoiceQuery"}
 
-# Locales en essai « intent fourre-tout » : VoiceFree remplace les intents Voice*
-FREE_QUERY_LOCALES = {"fr-FR"}
+# Locales à « intent fourre-tout » : VoiceFree remplace les intents Voice*
+FREE_QUERY_LOCALES = {"fr-FR", "en-US", "es-ES"}
 
 
 def _required_intents(locale: str) -> set:
@@ -54,6 +54,12 @@ def _required_intents(locale: str) -> set:
         # Le choix « numéro 2 » / « deux » passe par VoiceFree et Number
         return (REQUIRED_INTENTS - VOICE_INTENTS - {"DisambiguationIntent"}) | {"VoiceFree"}
     return REQUIRED_INTENTS
+
+GENERIC_LEAD = re.compile(
+    r"(le|la|les|l'|c'est|dis|à"          # fr
+    r"|the|it is|it's|say|at"             # en
+    r"|el|los|las|es|di|a las) \{\w+\}"  # es
+)
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "interactionModels" / "custom"
 
@@ -154,9 +160,9 @@ def test_voice_free_intent_is_bare_person_slot(locale):
             continue
         bare = [s for s in it.get("samples", []) if re.fullmatch(r"\{\w+\}", s)]
         assert not bare, f"{locale}/{name}: exemple nu {bare}"
-        # Amorce trop courante dans une phrase libre (« le volet… », « c'est quoi… »)
-        generic = [s for s in it.get("samples", [])
-                   if re.fullmatch(r"(le|la|les|l'|c'est|dis|à) \{\w+\}", s)]
+        # Amorce trop courante dans une phrase libre (« le volet… », « c'est quoi… »,
+        # « the light… », « el salón… »)
+        generic = [s for s in it.get("samples", []) if GENERIC_LEAD.fullmatch(s)]
         assert not generic, f"{locale}/{name}: amorce générique {generic}"
 
 
