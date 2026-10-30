@@ -186,7 +186,15 @@
                         "monte {Command}",
                         "allumer {Command}",
                         "ouvrir {Command}",
-                        "monter {Command}"
+                        "monter {Command}",
+                        "allume le {Command}",
+                        "allume la {Command}",
+                        "allume l' {Command}",
+                        "allume les {Command}",
+                        "ouvre le {Command}",
+                        "ouvre la {Command}",
+                        "ouvre l' {Command}",
+                        "ouvre les {Command}"
                     ]
                 },
                 {
@@ -210,7 +218,15 @@
                         "fermer {Command}",
                         "arrêter {Command}",
                         "couper {Command}",
-                        "descendre {Command}"
+                        "descendre {Command}",
+                        "éteins le {Command}",
+                        "éteins la {Command}",
+                        "éteins l' {Command}",
+                        "éteins les {Command}",
+                        "ferme le {Command}",
+                        "ferme la {Command}",
+                        "ferme l' {Command}",
+                        "ferme les {Command}"
                     ]
                 },
                 {
