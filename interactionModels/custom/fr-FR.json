@@ -133,7 +133,6 @@
                     ],
                     "name": "Date",
                     "samples": [
-                        "à {Times}",
                         "pour le {Dates}",
                         "pour {Times}",
                         "{Dates} à {Times}",
