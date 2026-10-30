@@ -138,3 +138,15 @@ def test_retry_never_replays_post(lambda_mod):
     assert lambda_mod._RETRY._is_method_retryable("GET")
     assert not lambda_mod._RETRY._is_method_retryable("POST")
     assert not lambda_mod._RETRY.is_retry("POST", 503)
+
+
+# ── Délai de lecture : 6 s pour la requête vocale, 3 s ailleurs ──
+
+def test_voice_command_uses_longer_read_timeout(lambda_mod):
+    hi = _make_handler_input("x")
+    jee = lambda_mod.JeeAsk(hi, fetch_question=False)
+    jee._request = MagicMock(return_value=None)
+    jee.language_strings = {}
+    jee.post_voice_command("quelle heure est-il")
+    assert jee._request.call_args.kwargs.get("timeout") is lambda_mod.VOICE_TIMEOUT
+    assert lambda_mod.VOICE_TIMEOUT.read_timeout == 6.0

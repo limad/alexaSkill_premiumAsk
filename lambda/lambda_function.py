@@ -110,6 +110,10 @@ HTTP = urllib3.PoolManager(
     maxsize=4,
 )
 
+# Requête vocale : le LLM côté Jeedom peut dépasser 3 s. On attend jusqu'à 6 s
+# (Alexa coupe à 8 s) ; le mode asynchrone répond de toute façon tout de suite.
+VOICE_TIMEOUT = urllib3.Timeout(connect=2.0, read=6.0)
+
 # ─── i18n : chargé une seule fois au cold-start (vs à chaque requête) ───────
 try:
     with open("language_strings.json", encoding="utf-8") as _f:
@@ -288,13 +292,16 @@ class JeeAsk:
         self.post_jee_log(speak)
         return speak
 
-    def _request(self, method: str, url: str, *, body: Optional[dict] = None, extra_headers: Optional[dict] = None):
+    def _request(self, method: str, url: str, *, body: Optional[dict] = None, extra_headers: Optional[dict] = None,
+                 timeout=None):
         """Exécute une requête HTTP avec retry/timeout hérités du pool global."""
         headers = self._get_headers()
         if extra_headers:
             headers.update(extra_headers)  # in-place, NE PAS réassigner (dict.update() renvoie None)
         try:
             kwargs = {"headers": headers}
+            if timeout is not None:
+                kwargs["timeout"] = timeout
             if body is not None:
                 kwargs["body"] = json.dumps(body).encode("utf-8")
             response = HTTP.request(method, url, **kwargs)
@@ -448,7 +455,7 @@ class JeeAsk:
             "forceExact": bool(force_exact),
             "code_version": CODE_VERS,
         }
-        response = self._request("POST", VOICE_ROUTER_URL, body=body)
+        response = self._request("POST", VOICE_ROUTER_URL, body=body, timeout=VOICE_TIMEOUT)
         if response is None:
             return {"reply": self.language_strings.get(prompts.ERROR_CONFIG, "Jeedom ne répond pas."),
                     "matched": False, "ambiguous": False, "options": [], "http_error": True}

@@ -156,24 +156,6 @@
                     "samples": [
                         "{Query}"
                     ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Choice",
-                            "type": "AMAZON.NUMBER"
-                        }
-                    ],
-                    "name": "DisambiguationIntent",
-                    "samples": [
-                        "numéro {Choice}",
-                        "le numéro {Choice}",
-                        "option {Choice}",
-                        "choix {Choice}",
-                        "c'est le {Choice}",
-                        "je veux le {Choice}",
-                        "je choisis le {Choice}"
-                    ]
                 }
             ],
             "types": [],

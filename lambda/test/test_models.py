@@ -51,7 +51,8 @@ FREE_QUERY_LOCALES = {"fr-FR"}
 
 def _required_intents(locale: str) -> set:
     if locale in FREE_QUERY_LOCALES:
-        return (REQUIRED_INTENTS - VOICE_INTENTS) | {"VoiceFree"}
+        # Le choix « numéro 2 » / « deux » passe par VoiceFree et Number
+        return (REQUIRED_INTENTS - VOICE_INTENTS - {"DisambiguationIntent"}) | {"VoiceFree"}
     return REQUIRED_INTENTS
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "interactionModels" / "custom"
@@ -140,6 +141,7 @@ def test_voice_free_intent_is_bare_person_slot(locale):
     """VoiceFree : sample "{Query}" seul, slot AMAZON.Person (reçoit la phrase entière)."""
     intents = _intents_by_name(_load_model(locale))
     assert not (VOICE_INTENTS & set(intents)), f"{locale}: intents Voice* encore présents"
+    assert "DisambiguationIntent" not in intents, f"{locale}: DisambiguationIntent capte les questions libres"
     intent = intents["VoiceFree"]
     assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
     assert intent["samples"] == ["{Query}"]
@@ -148,6 +150,8 @@ def test_voice_free_intent_is_bare_person_slot(locale):
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
 def test_disambiguation_intent_uses_amazon_number(locale):
     """DisambiguationIntent doit avoir un slot Choice typé AMAZON.NUMBER."""
+    if locale in FREE_QUERY_LOCALES:
+        pytest.skip("DisambiguationIntent retiré (choix via VoiceFree / Number)")
     intents = _intents_by_name(_load_model(locale))
     intent = intents["DisambiguationIntent"]
     assert intent["slots"], f"{locale}: DisambiguationIntent sans slot"
