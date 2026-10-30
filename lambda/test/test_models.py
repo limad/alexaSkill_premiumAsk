@@ -152,6 +152,10 @@ def test_voice_free_intent_is_bare_person_slot(locale):
             continue
         bare = [s for s in it.get("samples", []) if re.fullmatch(r"\{\w+\}", s)]
         assert not bare, f"{locale}/{name}: exemple nu {bare}"
+        # Amorce trop courante dans une phrase libre (« le volet… », « c'est quoi… »)
+        generic = [s for s in it.get("samples", [])
+                   if re.fullmatch(r"(le|la|les|l'|c'est|dis) \{\w+\}", s)]
+        assert not generic, f"{locale}/{name}: amorce générique {generic}"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)

@@ -70,11 +70,9 @@
                     ],
                     "name": "String",
                     "samples": [
-                        "c'est {Strings}",
                         "je dis {Strings}",
                         "la réponse est {Strings}",
-                        "ma réponse est {Strings}",
-                        "dis {Strings}"
+                        "ma réponse est {Strings}"
                     ]
                 },
                 {
@@ -136,7 +134,6 @@
                     "name": "Date",
                     "samples": [
                         "à {Times}",
-                        "le {Dates}",
                         "pour le {Dates}",
                         "pour {Times}",
                         "{Dates} à {Times}",
