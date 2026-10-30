@@ -62,6 +62,7 @@ from ask_sdk_model.slu.entityresolution import StatusCode
 
 # ─── Local imports ──────────────────────────────────────────────────────────
 import prompts
+import apl
 from config import APIKEY, DEBUG, JEEDOM_URL, VERIFY_SSL
 from const import (
     RESPONSE_DATE_TIME,
@@ -594,6 +595,7 @@ def _dispatch_voice_query(handler_input, full_query: str, locale_short: str = "f
     (sample générique "la {Selections}") alors qu'aucune question n'est en attente.
     Dans ce cas on traite la phrase comme une commande/question vocale normale.
     """
+    apl.set_title(handler_input, full_query)
     jee  = JeeAsk(handler_input, fetch_question=False)
     data = handler_input.attributes_manager.request_attributes.get("_", {})
     result = jee.post_voice_command(full_query)
@@ -759,7 +761,7 @@ class VoiceQueryIntentHandler(AbstractRequestHandler):
 
 class VoiceFreeIntentHandler(AbstractRequestHandler):
     """
-    Intent fourre-tout (fr-FR, en-US, es-ES) : sample "{Query}" seul, slot AMAZON.Person,
+    Intent fourre-tout (fr-FR, fr-CA, en-US, es-ES) : sample "{Query}" seul, slot AMAZON.Person,
     qui reçoit la phrase entière. Remplace les intents Voice* du modèle concerné.
     Une question Jeedom n'est attendue que dans une session déjà ouverte (le Q/A
     démarre par un LaunchRequest) : la phrase y vaut alors réponse libre (String).
@@ -1126,5 +1128,6 @@ sb.add_request_handler(IntentReflectorHandler())
 
 sb.add_exception_handler(CatchAllExceptionHandler())
 sb.add_global_request_interceptor(LocalizationInterceptor())
+sb.add_global_response_interceptor(apl.AplResponseInterceptor())
 
 lambda_handler = sb.lambda_handler()

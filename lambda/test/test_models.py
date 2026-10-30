@@ -46,7 +46,7 @@ REQUIRED_INTENTS = {
 VOICE_INTENTS = {"VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet", "VoiceQuery"}
 
 # Locales à « intent fourre-tout » : VoiceFree remplace les intents Voice*
-FREE_QUERY_LOCALES = {"fr-FR", "en-US", "es-ES"}
+FREE_QUERY_LOCALES = {"fr-FR", "fr-CA", "en-US", "es-ES"}
 
 
 def _required_intents(locale: str) -> set:

@@ -56,6 +56,7 @@ def _ensure_ask_sdk_mocks():
     sys.modules["ask_sdk_core.dispatch_components"].AbstractRequestHandler = _Stub
     sys.modules["ask_sdk_core.dispatch_components"].AbstractRequestInterceptor = _Stub
     sys.modules["ask_sdk_core.dispatch_components"].AbstractExceptionHandler = _Stub
+    sys.modules["ask_sdk_core.dispatch_components"].AbstractResponseInterceptor = _Stub
     sys.modules["ask_sdk_core.skill_builder"].SkillBuilder = _Stub
 
     utils = sys.modules["ask_sdk_core.utils"]
@@ -101,6 +102,16 @@ def _ensure_ask_sdk_mocks():
         _make_module(p)
     sys.modules["ask_sdk_model.interfaces.display"].HintDirective = _Stub
     sys.modules["ask_sdk_model.interfaces.display"].PlainTextHint = _Stub
+
+    # ask_sdk_model.interfaces.alexa.presentation.apl — RenderDocumentDirective
+    for p in ["ask_sdk_model.interfaces.alexa", "ask_sdk_model.interfaces.alexa.presentation",
+              "ask_sdk_model.interfaces.alexa.presentation.apl"]:
+        _make_module(p)
+
+    class _RenderDocumentDirective:
+        def __init__(self, token=None, document=None, datasources=None, **kw):
+            self.token, self.document, self.datasources = token, document, datasources
+    sys.modules["ask_sdk_model.interfaces.alexa.presentation.apl"].RenderDocumentDirective = _RenderDocumentDirective
 
 
 _ensure_ask_sdk_mocks()
