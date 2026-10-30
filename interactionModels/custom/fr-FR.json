@@ -86,9 +86,6 @@
                     ],
                     "name": "Select",
                     "samples": [
-                        "le {Selections}",
-                        "la {Selections}",
-                        "les {Selections}",
                         "je choisis {Selections}",
                         "sélectionne {Selections}",
                         "prends {Selections}",
@@ -169,8 +166,6 @@
                     ],
                     "name": "DisambiguationIntent",
                     "samples": [
-                        "le {Choice}",
-                        "la {Choice}",
                         "numéro {Choice}",
                         "le numéro {Choice}",
                         "option {Choice}",

@@ -89,3 +89,52 @@ def test_empty_query_says_no_match(lambda_mod):
         lambda_mod.VoiceFreeIntentHandler().handle(hi)
         inst.post_voice_command.assert_not_called()
         hi.response_builder.speak.assert_called_once_with("Aucune commande.")
+
+
+# ── Désambiguïsation sans « le {Choice} » : réponse via VoiceFree / Number ──
+
+@pytest.mark.parametrize("text,expected", [
+    ("le deuxième", 2), ("la première", 1), ("numéro 3", 3), ("deux", 2),
+    ("allume la lumière", None), ("", None),
+])
+def test_parse_choice(lambda_mod, text, expected):
+    assert lambda_mod._parse_choice(text) == expected
+
+
+def test_voice_free_with_pending_options_resolves_choice(lambda_mod):
+    hi = _make_handler_input("le deuxième", session_new=False)
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["allume le salon", "allume le salon TV"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.VoiceFreeIntentHandler().handle(hi)
+        inst.post_voice_command.assert_called_once_with("allume le salon TV", force_exact=True)
+        assert "pending_voice_options" not in hi.attributes_manager.session_attributes
+
+
+def test_voice_free_with_pending_options_but_no_number_dispatches(lambda_mod):
+    hi = _make_handler_input("allume la cuisine", session_new=True)
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["a", "b"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.VoiceFreeIntentHandler().handle(hi)
+        inst.post_voice_command.assert_called_once_with("allume la cuisine")
+
+
+def test_number_with_pending_options_resolves_choice(lambda_mod):
+    hi = _make_handler_input(None, session_new=False)
+    hi._intent_name = "Number"
+    hi._slots = {"Numbers": "1"}
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["allume le salon", "allume le salon TV"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.NumericIntentHandler().handle(hi)
+        inst.post_voice_command.assert_called_once_with("allume le salon", force_exact=True)
+        inst.post_jee_event.assert_not_called()
+
+
+# ── Relance HTTP : jamais sur POST (évite d'exécuter deux fois une commande) ──
+
+def test_retry_never_replays_post(lambda_mod):
+    assert lambda_mod._RETRY._is_method_retryable("GET")
+    assert not lambda_mod._RETRY._is_method_retryable("POST")
+    assert not lambda_mod._RETRY.is_retry("POST", 503)

@@ -89,7 +89,9 @@ logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 
 # ─── HTTP pool GLOBAL (réutilisé entre invocations chaudes — évite handshake TLS) ──
 # Timeouts courts : Alexa coupe à 8 s, mieux vaut échouer vite sur réseau lent.
-# Retry : 1 essai supplémentaire sur 5xx (reload plugin Jeedom temporaire).
+# Retry : 1 essai supplémentaire sur 5xx (reload plugin Jeedom temporaire), GET seulement.
+# Jamais de relance d'un POST : Jeedom a pu déjà exécuter la commande (un LLM à 4 s
+# dépasse le read timeout de 3 s → la même phrase repartait une 2e fois).
 # Compat urllib3 : `allowed_methods` (≥1.26) / `method_whitelist` (1.25.x).
 _RETRY_KW = dict(
     total=1,
@@ -97,12 +99,9 @@ _RETRY_KW = dict(
     status_forcelist=(500, 502, 503, 504),
 )
 try:
-    _RETRY = Retry(allowed_methods=frozenset(["GET", "POST"]), **_RETRY_KW)
+    _RETRY = Retry(allowed_methods=frozenset(["GET"]), **_RETRY_KW)
 except TypeError:
-    try:
-        _RETRY = Retry(method_whitelist=frozenset(["GET", "POST"]), **_RETRY_KW)
-    except TypeError:
-        _RETRY = Retry(**_RETRY_KW)
+    _RETRY = Retry(method_whitelist=frozenset(["GET"]), **_RETRY_KW)
 
 HTTP = urllib3.PoolManager(
     cert_reqs="CERT_REQUIRED" if VERIFY_SSL else "CERT_NONE",
@@ -638,34 +637,59 @@ class DisambiguationIntentHandler(AbstractRequestHandler):
         return is_intent_name("DisambiguationIntent")(handler_input)
 
     def handle(self, handler_input):
-        sess = handler_input.attributes_manager.session_attributes
-        options = sess.get("pending_voice_options") or []
-        data = handler_input.attributes_manager.request_attributes.get("_", {})
         choice_raw = (get_slot_value(handler_input, "Choice") or "").strip()
+        return _resolve_voice_choice(handler_input, choice_raw)
 
-        # Plus d'options en attente → l'user a parlé hors contexte
-        if not options:
-            logger.info("DisambiguationIntent sans choix en attente (choice=%s)", choice_raw)
-            msg = data.get(prompts.NO_MATCH, "Aucune commande trouvée pour cette demande.")
-            return handler_input.response_builder.speak(msg).set_should_end_session(True).response
 
-        try:
-            idx = int(choice_raw) - 1
-        except (ValueError, TypeError):
-            idx = -1
-        if idx < 0 or idx >= len(options):
-            msg = "Choix invalide. " + (sess.get("last_disambig_prompt") or "Reformule.")
-            return (handler_input.response_builder.speak(msg).ask(msg)
-                    .set_should_end_session(False).response)
+# Choix énoncé en toutes lettres (« le deuxième », « deux ») : utilisé quand la
+# réponse à « 1 : …, 2 : … lequel ? » arrive par VoiceFree ou Number.
+_CHOICE_WORDS = {
+    "premier": 1, "première": 1, "un": 1, "une": 1,
+    "deuxième": 2, "second": 2, "seconde": 2, "deux": 2,
+    "troisième": 3, "trois": 3,
+    "quatrième": 4, "quatre": 4,
+    "cinquième": 5, "cinq": 5,
+}
 
-        # Nettoie la session avant relance
-        chosen = options[idx]
-        sess.pop("pending_voice_options", None)
 
-        jee = JeeAsk(handler_input, fetch_question=False)
-        logger.info("DisambiguationIntent: chosen #%d → '%s'", idx + 1, chosen)
-        result = jee.post_voice_command(chosen, force_exact=True)
-        return handler_input.response_builder.speak(result["reply"]).set_should_end_session(True).response
+def _parse_choice(text: str) -> Optional[int]:
+    """Premier nombre (chiffres ou mot) de la phrase, sinon None."""
+    for word in re.split(r"[\s'’-]+", (text or "").lower()):
+        if word.isdigit():
+            return int(word)
+        if word in _CHOICE_WORDS:
+            return _CHOICE_WORDS[word]
+    return None
+
+
+def _resolve_voice_choice(handler_input, choice_raw):
+    """Applique le choix de l'utilisateur parmi pending_voice_options (désambiguïsation)."""
+    sess = handler_input.attributes_manager.session_attributes
+    options = sess.get("pending_voice_options") or []
+    data = handler_input.attributes_manager.request_attributes.get("_", {})
+    # Plus d'options en attente → l'user a parlé hors contexte
+    if not options:
+        logger.info("DisambiguationIntent sans choix en attente (choice=%s)", choice_raw)
+        msg = data.get(prompts.NO_MATCH, "Aucune commande trouvée pour cette demande.")
+        return handler_input.response_builder.speak(msg).set_should_end_session(True).response
+
+    try:
+        idx = int(choice_raw) - 1
+    except (ValueError, TypeError):
+        idx = -1
+    if idx < 0 or idx >= len(options):
+        msg = "Choix invalide. " + (sess.get("last_disambig_prompt") or "Reformule.")
+        return (handler_input.response_builder.speak(msg).ask(msg)
+                .set_should_end_session(False).response)
+
+    # Nettoie la session avant relance
+    chosen = options[idx]
+    sess.pop("pending_voice_options", None)
+
+    jee = JeeAsk(handler_input, fetch_question=False)
+    logger.info("DisambiguationIntent: chosen #%d → '%s'", idx + 1, chosen)
+    result = jee.post_voice_command(chosen, force_exact=True)
+    return handler_input.response_builder.speak(result["reply"]).set_should_end_session(True).response
 
 
 class VoiceLaunchIntentHandler(AbstractRequestHandler):
@@ -729,6 +753,12 @@ class VoiceFreeIntentHandler(AbstractRequestHandler):
             data = handler_input.attributes_manager.request_attributes.get("_", {})
             return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre commande."))
 
+        # Réponse à « 1 : …, 2 : … lequel ? » (« le deuxième »)
+        if handler_input.attributes_manager.session_attributes.get("pending_voice_options"):
+            choice = _parse_choice(query)
+            if choice is not None:
+                return _resolve_voice_choice(handler_input, choice)
+
         session = getattr(handler_input.request_envelope, "session", None)
         if session is not None and getattr(session, "new", True) is False:
             jee = JeeAsk(handler_input)
@@ -769,6 +799,9 @@ class NumericIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("Numeric Intent")
+        # Réponse « deux » à une désambiguïsation en cours
+        if handler_input.attributes_manager.session_attributes.get("pending_voice_options"):
+            return _resolve_voice_choice(handler_input, get_slot_value(handler_input, "Numbers"))
         jee = JeeAsk(handler_input)
         guard = _qa_guard_no_question(handler_input, jee, "Numeric")
         if guard is not None:
