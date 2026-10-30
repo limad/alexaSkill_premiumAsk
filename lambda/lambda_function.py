@@ -790,6 +790,10 @@ class YesIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("Yes Intent")
+        # « oui » à « Veux-tu dire : … ? » (une seule option en attente)
+        options = handler_input.attributes_manager.session_attributes.get("pending_voice_options")
+        if options:
+            return _resolve_voice_choice(handler_input, "1" if len(options) == 1 else "")
         jee = JeeAsk(handler_input)
         speak_output = jee.post_jee_event(RESPONSE_YES, RESPONSE_YES)
         return _handle_qa_response(handler_input, jee, speak_output)
@@ -801,6 +805,12 @@ class NoIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("No Intent")
+        # « non » à une confirmation / un choix en attente : rien n'est exécuté
+        sess = handler_input.attributes_manager.session_attributes
+        if sess.pop("pending_voice_options", None):
+            data = handler_input.attributes_manager.request_attributes.get("_", {})
+            return (handler_input.response_builder.speak(data.get(prompts.OKAY, "Okay"))
+                    .set_should_end_session(True).response)
         jee = JeeAsk(handler_input)
         speak_output = jee.post_jee_event(RESPONSE_NO, RESPONSE_NO)
         return _handle_qa_response(handler_input, jee, speak_output)

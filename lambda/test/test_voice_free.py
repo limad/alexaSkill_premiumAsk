@@ -170,3 +170,39 @@ def test_invalid_choice_is_translated(lambda_mod):
     hi.attributes_manager.session_attributes["pending_voice_options"] = ["a", "b"]
     lambda_mod._resolve_voice_choice(hi, 9)
     hi.response_builder.speak.assert_called_once_with("Invalid choice.")
+
+
+# ── Confirmation « Veux-tu dire : … ? » (action incertaine côté Jeedom) ──────
+
+def test_yes_confirms_single_pending_option(lambda_mod):
+    hi = _make_handler_input(None, session_new=False)
+    hi._intent_name = "AMAZON.YesIntent"
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["allume la lumière du bureau"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.YesIntentHandler().handle(hi)
+        inst.post_voice_command.assert_called_once_with("allume la lumière du bureau", force_exact=True)
+        inst.post_jee_event.assert_not_called()
+
+
+def test_yes_with_several_options_asks_for_number(lambda_mod):
+    hi = _make_handler_input(None, session_new=False)
+    hi._intent_name = "AMAZON.YesIntent"
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["a", "b"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.YesIntentHandler().handle(hi)
+        inst.post_voice_command.assert_not_called()
+        assert hi.attributes_manager.session_attributes["pending_voice_options"] == ["a", "b"]
+
+
+def test_no_cancels_pending_option(lambda_mod):
+    hi = _make_handler_input(None, session_new=False)
+    hi._intent_name = "AMAZON.NoIntent"
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["allume la lumière du bureau"]
+    with patch.object(lambda_mod, "JeeAsk") as MockJee:
+        inst = _mock_jee(MockJee, None)
+        lambda_mod.NoIntentHandler().handle(hi)
+        inst.post_voice_command.assert_not_called()
+        inst.post_jee_event.assert_not_called()
+        assert "pending_voice_options" not in hi.attributes_manager.session_attributes
