@@ -150,3 +150,23 @@ def test_voice_command_uses_longer_read_timeout(lambda_mod):
     jee.post_voice_command("quelle heure est-il")
     assert jee._request.call_args.kwargs.get("timeout") is lambda_mod.VOICE_TIMEOUT
     assert lambda_mod.VOICE_TIMEOUT.read_timeout == 6.0
+
+
+# ── Langue : la locale de l'Echo part avec la phrase ──
+
+def test_voice_command_sends_locale(lambda_mod):
+    hi = _make_handler_input("x")
+    hi.request_envelope.request.locale = "en-US"
+    jee = lambda_mod.JeeAsk(hi, fetch_question=False)
+    jee._request = MagicMock(return_value=None)
+    jee.language_strings = {}
+    jee.post_voice_command("what time is it")
+    assert jee._request.call_args.kwargs["body"]["locale"] == "en-US"
+
+
+def test_invalid_choice_is_translated(lambda_mod):
+    hi = _make_handler_input("le neuvième", session_new=False)
+    hi.attributes_manager.request_attributes = {"_": {"INVALID_CHOICE": "Invalid choice."}}
+    hi.attributes_manager.session_attributes["pending_voice_options"] = ["a", "b"]
+    lambda_mod._resolve_voice_choice(hi, 9)
+    hi.response_builder.speak.assert_called_once_with("Invalid choice.")

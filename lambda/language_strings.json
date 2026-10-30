@@ -14,7 +14,8 @@
     "WELCOME_MESSAGE": "Welcome to {}. Input text is: {}",
     "DIRECT_PROMPT": "What can I do for you?",
     "HINT_TEXT": "say yes, no, or stop",
-    "NO_MATCH": "Sorry, I couldn't find a command matching your request."
+    "NO_MATCH": "Sorry, I couldn't find a command matching your request.",
+    "INVALID_CHOICE": "Invalid choice, say the number of the command."
   },
   "de": {
     "ERROR_401": "Ich habe scheinbar keine Berechtigungen für die verbindung zu Jeedom. Bitte prüfe deinen H A Benutzer oder Access Token.",
@@ -31,7 +32,8 @@
     "WELCOME_MESSAGE": "Willkommen bei {}. Der input text ist: {}",
     "DIRECT_PROMPT": "Was kann ich für Sie tun?",
     "HINT_TEXT": "sagen Sie ja, nein oder stopp",
-    "NO_MATCH": "Ich konnte keinen passenden Befehl für Ihre Anfrage finden."
+    "NO_MATCH": "Ich konnte keinen passenden Befehl für Ihre Anfrage finden.",
+    "INVALID_CHOICE": "Ungültige Auswahl, nenne die Nummer des Befehls."
   },
   "fr": {
     "ERROR_401": "Il semblerait que je ne sois pas authorisée à accéder à Jeedom, veuillez verifier la configuration de votre skill, la clé API et essayez à nouveau.",
@@ -48,7 +50,8 @@
     "WELCOME_MESSAGE": "Bienvenue sur {}. Le champ texte est: {}",
     "DIRECT_PROMPT": "Que puis-je pour vous ?",
     "HINT_TEXT": "dire oui, non, ou arrête",
-    "NO_MATCH": "Aucune commande trouvée pour cette demande."
+    "NO_MATCH": "Aucune commande trouvée pour cette demande.",
+    "INVALID_CHOICE": "Choix invalide, dis le numéro de la commande."
   },
   "it": {
     "ERROR_401": "Problema con le autorizzazioni di accesso ad Jeedom: controllare l'account collegato o eventuali token utilizzati e riprovare",
@@ -65,7 +68,8 @@
     "WELCOME_MESSAGE": "Benvenuto su {}. Il testo specificato e': {}",
     "DIRECT_PROMPT": "Cosa posso fare per te?",
     "HINT_TEXT": "dire sì, no o fermati",
-    "NO_MATCH": "Nessun comando trovato per questa richiesta."
+    "NO_MATCH": "Nessun comando trovato per questa richiesta.",
+    "INVALID_CHOICE": "Scelta non valida, di' il numero del comando."
   },
   "pt": {
     "ERROR_401": "Parece que eu não estou autorizada a acessar seu Jeedom. Verifique as credenciais e tente novamente.",
@@ -82,7 +86,8 @@
     "WELCOME_MESSAGE": "Bem vindo ao {}. A entrada de texto é: {}",
     "DIRECT_PROMPT": "O que posso fazer por você?",
     "HINT_TEXT": "diga sim, não ou pare",
-    "NO_MATCH": "Nenhum comando encontrado para esta solicitação."
+    "NO_MATCH": "Nenhum comando encontrado para esta solicitação.",
+    "INVALID_CHOICE": "Opção inválida, diga o número do comando."
   },
   "es": {
     "ERROR_401": "Parece que no tengo permisos para acceder a Jeedom. Por favor, comprueba el enlace de cuenta o el token de acceso y vuelve a intentarlo.",
@@ -99,7 +104,8 @@
     "WELCOME_MESSAGE": "Bienvenido a {}. El texto de entrada es: {}",
     "DIRECT_PROMPT": "¿En qué puedo ayudarle?",
     "HINT_TEXT": "diga sí, no o para",
-    "NO_MATCH": "No se encontró ningún comando para esta solicitud."
+    "NO_MATCH": "No se encontró ningún comando para esta solicitud.",
+    "INVALID_CHOICE": "Opción no válida, di el número del comando."
   },
   "fr-FR": {
     "SKILL_NAME": "Actionable notifications"

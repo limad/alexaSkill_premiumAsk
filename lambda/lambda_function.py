@@ -437,6 +437,11 @@ class JeeAsk:
 
         device_sn = ""
         person_id = ""
+        locale = ""
+        try:
+            locale = self.handler_input.request_envelope.request.locale or ""
+        except AttributeError:
+            pass
         try:
             device_sn = self.handler_input.request_envelope.context.system.device.device_id or ""
         except AttributeError:
@@ -453,6 +458,7 @@ class JeeAsk:
             "deviceSerialNumber": device_sn,
             "personId": person_id,
             "forceExact": bool(force_exact),
+            "locale": locale,
             "code_version": CODE_VERS,
         }
         response = self._request("POST", VOICE_ROUTER_URL, body=body, timeout=VOICE_TIMEOUT)
@@ -685,7 +691,7 @@ def _resolve_voice_choice(handler_input, choice_raw):
     except (ValueError, TypeError):
         idx = -1
     if idx < 0 or idx >= len(options):
-        msg = "Choix invalide. " + (sess.get("last_disambig_prompt") or "Reformule.")
+        msg = data.get(prompts.INVALID_CHOICE, "Choix invalide, dis le numéro de la commande.")
         return (handler_input.response_builder.speak(msg).ask(msg)
                 .set_should_end_session(False).response)
 
