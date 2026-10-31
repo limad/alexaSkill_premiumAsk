@@ -1,6 +1,7 @@
-# VERSION 0.13.0
-# Refactor : suppression du pattern Borg (fuite cross-user), PoolManager global,
-# timeouts courts + retry, fix des bugs headers.update / raise nus / CatchAll.
+# VERSION 0.14.0
+# Skill de questions/réponses seulement : un scénario Jeedom pose une question,
+# la réponse (oui/non, nombre, durée, date, choix, texte) lui est renvoyée.
+# Les commandes vocales libres sont prises en charge par le skill Frida.
 
 CODE_VERS = 0.4
 TOKEN = ""          # Token account-linking longue durée (laisser vide pour récupération auto)
@@ -81,7 +82,6 @@ JEEDOM_URL = JEEDOM_URL.rstrip("/")
 QUESTION_URL = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askQuestion.php"
 RESPONSE_URL = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askResponse.php?command=reponseASK"
 LOG_URL      = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askResponse.php?command=log"
-VOICE_ROUTER_URL = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/voiceRouter.php"
 # APIKEY est passée en header Authorization (cf. _get_headers ci-dessous), plus en query string
 
 # ─── Logging ────────────────────────────────────────────────────────────────
@@ -110,10 +110,6 @@ HTTP = urllib3.PoolManager(
     retries=_RETRY,
     maxsize=4,
 )
-
-# Requête vocale : le LLM côté Jeedom peut dépasser 3 s. On attend jusqu'à 6 s
-# (Alexa coupe à 8 s) ; le mode asynchrone répond de toute façon tout de suite.
-VOICE_TIMEOUT = urllib3.Timeout(connect=2.0, read=6.0)
 
 # ─── i18n : chargé une seule fois au cold-start (vs à chaque requête) ───────
 try:
@@ -159,31 +155,29 @@ def _get_resolved_slot(handler_input, slot_name: str) -> Optional[str]:
     return slot.value if slot else None
 
 
-def _locale_short(handler_input) -> str:
-    """Code langue court (ex: 'fr') depuis la locale Echo, 'fr' par défaut."""
-    try:
-        return (handler_input.request_envelope.request.locale or "fr")[:2].lower()
-    except AttributeError:
-        return "fr"
+def _no_question_response(handler_input, jee):
+    """
+    Réponse quand aucune question Jeedom n'attend : le texte d'erreur si Jeedom
+    n'a pas pu être lu, sinon « aucune question en attente » (ce skill ne prend
+    pas de commande libre : c'est le rôle du skill Frida). Ferme la session.
+    """
+    data = handler_input.attributes_manager.request_attributes.get("_", {})
+    if isinstance(jee.jee_state, QuestionStateError) and jee.jee_state.text:
+        text = jee.jee_state.text
+    else:
+        text = data.get(prompts.NO_QUESTION, "Aucune question en attente.")
+    return handler_input.response_builder.speak(text).set_should_end_session(True).response
 
 
 def _qa_guard_no_question(handler_input, jee, label: str):
     """
-    Garde anti-crash pour les handlers de réponse Q/A à slot TYPÉ (Number/Duration/
-    Date) : ces intents n'ont de sens que pendant un dialogue Q/A. Si le NLU les
-    déclenche hors contexte (ex: "allumer le four" capté par l'intent Date via le
-    slot AMAZON.DATE), aucune QuestionState n'est active et le slot ne contient pas
-    la phrase brute. On répond proprement NO_MATCH au lieu de POSTer un event vide
-    → évite la réponse sans speech qu'Alexa rejette
-    ("Désolé, j'ai quelques problèmes").
-
-    Retourne une Response si hors contexte Q/A, sinon None (flow normal).
+    Les intents de réponse n'ont de sens que si Jeedom a posé une question.
+    Retourne la Response « aucune question » hors Q/A, sinon None (flow normal).
     """
     if isinstance(jee.jee_state, QuestionState):
         return None
-    data = handler_input.attributes_manager.request_attributes.get("_", {})
-    logger.info("%s hors contexte Q/A → réponse no-match", label)
-    return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre demande."))
+    logger.info("%s sans question en attente", label)
+    return _no_question_response(handler_input, jee)
 
 
 def _add_hint(response_builder, text: str):
@@ -199,22 +193,6 @@ def _handle_response(handler, speak_out: Optional[str]):
     if speak_out:
         return handler.response_builder.speak(speak_out).response
     return handler.response_builder.response
-
-
-def _get_request_text(handler_input, slot_names=()):
-    """Retourne le texte brut si présent, sinon concatène les slots utiles."""
-    request = getattr(getattr(handler_input, "request_envelope", None), "request", None)
-    if request:
-        for attr in ("input_transcript", "inputTranscript", "raw_text", "rawText", "utterance"):
-            value = getattr(request, attr, None)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-    values = []
-    for slot_name in slot_names:
-        value = (_get_resolved_slot(handler_input, slot_name) or "").strip()
-        if value and value != "?":
-            values.append(value)
-    return " ".join(values).strip()
 
 
 def _handle_qa_response(handler_input, jee, speak_out: Optional[str]):
@@ -337,8 +315,7 @@ class JeeAsk:
         state_str = outer.get("state")
         if not state_str:
             logger.info("Pas de question Jeedom en attente (alexaAsk.json vide)")
-            self._set_jee_error(prompts.ERROR_CONFIG)
-            return
+            return  # jee_state reste None : « aucune question en attente »
 
         try:
             state = json.loads(state_str)
@@ -349,7 +326,7 @@ class JeeAsk:
 
         text = state.get("text") or ""
         if not text:
-            self._set_jee_error(prompts.ERROR_CONFIG)
+            logger.info("Question Jeedom sans texte")
             return
 
         self.jee_state = QuestionState(
@@ -425,64 +402,6 @@ class JeeAsk:
         self.jee_state = None
         return ""
 
-    # ── voice control (mode direct — user commande Jeedom directement) ──────
-    def post_voice_command(self, query: str, force_exact: bool = False) -> dict:
-        """
-        Envoie la commande au routeur vocal Jeedom (voiceRouter.php).
-        Le routeur décide lui-même entre voiceControl et voiceQuery selon la config
-        Jeedom en temps réel — plus de redéploiement Lambda pour changer de mode.
-        """
-        fallback = self.language_strings.get(prompts.NO_MATCH, "Je n'ai pas compris.")
-        if not query or not query.strip():
-            return {"reply": fallback, "matched": False, "ambiguous": False, "options": []}
-
-        device_sn = ""
-        person_id = ""
-        locale = ""
-        try:
-            locale = self.handler_input.request_envelope.request.locale or ""
-        except AttributeError:
-            pass
-        try:
-            device_sn = self.handler_input.request_envelope.context.system.device.device_id or ""
-        except AttributeError:
-            pass
-        try:
-            person = self.handler_input.request_envelope.context.system.person
-            if person:
-                person_id = person.person_id or ""
-        except AttributeError:
-            pass
-
-        body = {
-            "query": query.strip(),
-            "deviceSerialNumber": device_sn,
-            "personId": person_id,
-            "forceExact": bool(force_exact),
-            "locale": locale,
-            "code_version": CODE_VERS,
-        }
-        response = self._request("POST", VOICE_ROUTER_URL, body=body, timeout=VOICE_TIMEOUT)
-        if response is None:
-            return {"reply": self.language_strings.get(prompts.ERROR_CONFIG, "Jeedom ne répond pas."),
-                    "matched": False, "ambiguous": False, "options": [], "http_error": True}
-        try:
-            data = json.loads(response.data.decode("utf-8") or "{}")
-        except json.JSONDecodeError:
-            logger.error("voiceRouter: réponse JSON invalide")
-            return {"reply": self.language_strings.get(prompts.ERROR_CONFIG, "Réponse invalide."),
-                    "matched": False, "ambiguous": False, "options": [], "http_error": True}
-        logger.info("voiceRouter: route=%s matched=%s elapsed=%sms",
-                    data.get("route"), data.get("matched"), data.get("elapsed_ms"))
-        return {
-            "reply":      data.get("reply") or "",
-            "matched":    bool(data.get("matched")),
-            "ambiguous":  bool(data.get("ambiguous")),
-            "options":    data.get("options") or [],
-            "query":      data.get("query", query.strip()),
-            "http_error": False,
-        }
-
     # ── log push vers Jeedom ────────────────────────────────────────────────
     def post_jee_log(self, log_text: str, **kwargs):
         """Envoie un log au plugin côté Jeedom (askResponse.php?command=log). Best-effort."""
@@ -517,280 +436,23 @@ class JeeAsk:
 
 class LaunchRequestHandler(AbstractRequestHandler):
     """
-    Deux modes :
-      A) Q/A (initiative Jeedom) — alexaAsk.json contient une question.
-         Lambda parle la question et attend la réponse.
-      B) Contrôle direct (initiative user) — alexaAsk.json vide ou absent.
-         Lambda invite l'user à donner une commande ("Que puis-je pour vous ?").
+    Le plugin ouvre le skill quand un scénario pose une question (alexaAsk.json) :
+    on la prononce et on attend la réponse. Sans question en attente, on le dit
+    et on ferme la session.
     """
     def can_handle(self, handler_input):
         return is_request_type("LaunchRequest")(handler_input)
 
     def handle(self, handler_input):
         jee = JeeAsk(handler_input)
-        data = handler_input.attributes_manager.request_attributes.get("_", {})
-        hint_text = data.get(prompts.HINT_TEXT, "dire arrête")
-
-        # Mode A : Q/A classique (Jeedom a posé une question)
         if isinstance(jee.jee_state, QuestionState) and jee.jee_state.text:
+            data = handler_input.attributes_manager.request_attributes.get("_", {})
             builder = handler_input.response_builder.speak(jee.jee_state.text)
             if jee.jee_state.event_id:
                 builder.ask("")
-            _add_hint(builder, hint_text)
+            _add_hint(builder, data.get(prompts.HINT_TEXT, "dire arrête"))
             return builder.response
-
-        # Mode B : contrôle direct — prompt court et clair (i18n via DIRECT_PROMPT)
-        prompt_txt = data.get(prompts.DIRECT_PROMPT, "Que puis-je pour vous ?")
-        builder = handler_input.response_builder.speak(prompt_txt).ask(prompt_txt)
-        _add_hint(builder, hint_text)
-        return builder.response
-
-
-"""
-Verbes Voice* par locale (langue Echo).
-Ces verbes sont préfixés à la phrase reçue avant POST vers Jeedom — l'utilisateur
-doit avoir des interactions Jeedom configurées dans la même langue que son Echo.
-"""
-VOICE_VERBS = {
-    "fr": {"VoiceLaunch": "activer", "VoiceTurnOn": "allumer",     "VoiceTurnOff": "éteindre",    "VoiceSet": "régler",   "VoiceQuery": ""},
-    "en": {"VoiceLaunch": "activate","VoiceTurnOn": "turn on",     "VoiceTurnOff": "turn off",    "VoiceSet": "set",      "VoiceQuery": ""},
-    "es": {"VoiceLaunch": "activar", "VoiceTurnOn": "encender",    "VoiceTurnOff": "apagar",      "VoiceSet": "ajustar",  "VoiceQuery": ""},
-    "de": {"VoiceLaunch": "starten", "VoiceTurnOn": "einschalten", "VoiceTurnOff": "ausschalten", "VoiceSet": "stellen",  "VoiceQuery": ""},
-    "it": {"VoiceLaunch": "attivare","VoiceTurnOn": "accendere",   "VoiceTurnOff": "spegnere",    "VoiceSet": "impostare","VoiceQuery": ""},
-    "pt": {"VoiceLaunch": "ativar",  "VoiceTurnOn": "ligar",       "VoiceTurnOff": "desligar",    "VoiceSet": "definir",  "VoiceQuery": ""},
-}
-
-
-def _handle_voice_intent(handler_input, intent_name: str):
-    """
-    Handler générique pour les intents Voice* : reconstruit la phrase en préfixant
-    le verbe (qu'Alexa a consommé dans le carrier), traduit selon la locale Echo,
-    puis forwarde à Jeedom. Si Jeedom détecte plusieurs interactions proches,
-    on stocke les options en session et on demande à l'utilisateur de choisir.
-    """
-    jee = JeeAsk(handler_input, fetch_question=False)
-    # VoiceQuery utilise le slot "Query" (AMAZON.SearchQuery, open-ended pour le LLM)
-    # Les autres Voice* utilisent "Command" (JeeCommand, NLU entraîné sur les équipements Jeedom)
-    slot_name = "Query" if intent_name == "VoiceQuery" else "Command"
-    query = (_get_resolved_slot(handler_input, slot_name) or "").strip()
-    if not query:
-        data = handler_input.attributes_manager.request_attributes.get("_", {})
-        return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre commande."))
-    # Verbe locale-aware (fallback fr si locale inconnue)
-    locale_short = _locale_short(handler_input)
-    verb = VOICE_VERBS.get(locale_short, VOICE_VERBS["fr"]).get(intent_name, "")
-    full_query = f"{verb} {query}".strip()
-    logger.info("VoiceCommand[%s]: %s", locale_short, full_query)
-    return _dispatch_voice_query(handler_input, full_query, locale_short)
-
-
-def _dispatch_voice_query(handler_input, full_query: str, locale_short: str = "fr"):
-    """
-    Forwarde une phrase vocale déjà reconstruite à Jeedom (voiceRouter) et gère
-    le résultat : erreur HTTP, désambiguïsation, no-match, succès.
-
-    Réutilisé par _handle_voice_intent ET par les handlers de réponse Q/A
-    (Select/String/…) quand ils sont déclenchés HORS contexte Q/A : le NLU peut
-    router "demande à jeedom la température du thermostat" vers l'intent Select
-    (sample générique "la {Selections}") alors qu'aucune question n'est en attente.
-    Dans ce cas on traite la phrase comme une commande/question vocale normale.
-    """
-    apl.set_title(handler_input, full_query)
-    jee  = JeeAsk(handler_input, fetch_question=False)
-    data = handler_input.attributes_manager.request_attributes.get("_", {})
-    result = jee.post_voice_command(full_query)
-
-    # ── Erreur HTTP : Jeedom injoignable ou réponse invalide ─────────────────
-    if result.get("http_error"):
-        return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Jeedom ne répond pas."))
-
-    # ── Disambiguation : 2+ matches proches → on stocke et on demande ────────
-    if result.get("ambiguous") and result.get("options"):
-        sess = handler_input.attributes_manager.session_attributes
-        sess["pending_voice_options"] = result["options"]
-        logger.info("VoiceCommand[%s]: ambiguous (%d options) → eliciting choice",
-                    locale_short, len(result["options"]))
-        builder = (handler_input.response_builder
-                   .speak(result["reply"])
-                   .ask(result["reply"])
-                   .set_should_end_session(False))
-        _add_hint(builder, data.get(prompts.HINT_TEXT, "dire arrête"))
-        return builder.response
-
-    # ── Aucune interaction trouvée ────────────────────────────────────────────
-    if not result.get("matched"):
-        no_match = data.get(prompts.NO_MATCH, "Aucune commande trouvée pour cette demande.")
-        logger.info("VoiceCommand[%s]: no match for '%s'", locale_short, full_query)
-        return handler_input.response_builder.speak(no_match).set_should_end_session(True).response
-
-    # ── Succès ────────────────────────────────────────────────────────────────
-    return handler_input.response_builder.speak(result["reply"]).set_should_end_session(True).response
-
-
-def _forward_misrouted_intent(handler_input, intent_name: str, slot_names=()):
-    data = handler_input.attributes_manager.request_attributes.get("_", {})
-    locale_short = _locale_short(handler_input)
-    query = _get_request_text(handler_input, slot_names)
-    if not query:
-        jee = JeeAsk(handler_input, fetch_question=False)
-        logger.info("%s misrouted without usable text", intent_name)
-        jee.post_jee_log("Intent Alexa sans texte exploitable", intent=intent_name)
-        no_match = data.get(prompts.NO_MATCH, "Aucune commande trouvée pour cette demande.")
-        return handler_input.response_builder.speak(no_match).set_should_end_session(True).response
-
-    logger.info("%s misrouted -> VoiceCommand[%s]: %s", intent_name, locale_short, query)
-    return _dispatch_voice_query(handler_input, query, locale_short)
-
-
-class DisambiguationIntentHandler(AbstractRequestHandler):
-    """
-    Active si l'utilisateur a reçu un prompt "1 : phrase A, 2 : phrase B, lequel ?"
-    et répond "le deuxième" ou "deux". Slot Choice = AMAZON.NUMBER.
-    Re-poste la phrase choisie à Jeedom avec forceExact=true (skip re-disambiguation).
-    """
-    def can_handle(self, handler_input):
-        return is_intent_name("DisambiguationIntent")(handler_input)
-
-    def handle(self, handler_input):
-        choice_raw = (get_slot_value(handler_input, "Choice") or "").strip()
-        return _resolve_voice_choice(handler_input, choice_raw)
-
-
-# Choix énoncé en toutes lettres (« le deuxième », « deux ») : utilisé quand la
-# réponse à « 1 : …, 2 : … lequel ? » arrive par VoiceFree ou Number.
-_CHOICE_WORDS = {
-    "premier": 1, "première": 1, "un": 1, "une": 1,
-    "deuxième": 2, "second": 2, "seconde": 2, "deux": 2,
-    "troisième": 3, "trois": 3,
-    "quatrième": 4, "quatre": 4,
-    "cinquième": 5, "cinq": 5,
-    # en
-    "first": 1, "one": 1, "two": 2, "third": 3, "three": 3,
-    "fourth": 4, "four": 4, "fifth": 5, "five": 5,
-    # es
-    "primero": 1, "primera": 1, "uno": 1, "segundo": 2, "segunda": 2, "dos": 2,
-    "tercero": 3, "tercera": 3, "tres": 3, "cuarto": 4, "cuarta": 4, "cuatro": 4,
-    "quinto": 5, "quinta": 5, "cinco": 5,
-}
-
-
-def _parse_choice(text: str) -> Optional[int]:
-    """Premier nombre (chiffres ou mot) de la phrase, sinon None."""
-    for word in re.split(r"[\s'’-]+", (text or "").lower()):
-        if word.isdigit():
-            return int(word)
-        if word in _CHOICE_WORDS:
-            return _CHOICE_WORDS[word]
-    return None
-
-
-def _resolve_voice_choice(handler_input, choice_raw):
-    """Applique le choix de l'utilisateur parmi pending_voice_options (désambiguïsation)."""
-    sess = handler_input.attributes_manager.session_attributes
-    options = sess.get("pending_voice_options") or []
-    data = handler_input.attributes_manager.request_attributes.get("_", {})
-    # Plus d'options en attente → l'user a parlé hors contexte
-    if not options:
-        logger.info("DisambiguationIntent sans choix en attente (choice=%s)", choice_raw)
-        msg = data.get(prompts.NO_MATCH, "Aucune commande trouvée pour cette demande.")
-        return handler_input.response_builder.speak(msg).set_should_end_session(True).response
-
-    try:
-        idx = int(choice_raw) - 1
-    except (ValueError, TypeError):
-        idx = -1
-    if idx < 0 or idx >= len(options):
-        msg = data.get(prompts.INVALID_CHOICE, "Choix invalide, dis le numéro de la commande.")
-        return (handler_input.response_builder.speak(msg).ask(msg)
-                .set_should_end_session(False).response)
-
-    # Nettoie la session avant relance
-    chosen = options[idx]
-    sess.pop("pending_voice_options", None)
-
-    jee = JeeAsk(handler_input, fetch_question=False)
-    logger.info("DisambiguationIntent: chosen #%d → '%s'", idx + 1, chosen)
-    result = jee.post_voice_command(chosen, force_exact=True)
-    return handler_input.response_builder.speak(result["reply"]).set_should_end_session(True).response
-
-
-class VoiceLaunchIntentHandler(AbstractRequestHandler):
-    """lance/launch/lanza/etc {X} → 'activer X' (locale-aware)."""
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceLaunch")(handler_input)
-
-    def handle(self, handler_input):
-        return _handle_voice_intent(handler_input, "VoiceLaunch")
-
-
-class VoiceTurnOnIntentHandler(AbstractRequestHandler):
-    """allume/turn on/enciende/etc {X} → 'allumer X' (locale-aware)."""
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceTurnOn")(handler_input)
-
-    def handle(self, handler_input):
-        return _handle_voice_intent(handler_input, "VoiceTurnOn")
-
-
-class VoiceTurnOffIntentHandler(AbstractRequestHandler):
-    """éteins/turn off/apaga/etc {X} → 'éteindre X' (locale-aware)."""
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceTurnOff")(handler_input)
-
-    def handle(self, handler_input):
-        return _handle_voice_intent(handler_input, "VoiceTurnOff")
-
-
-class VoiceSetIntentHandler(AbstractRequestHandler):
-    """mets/set/pon/etc {X} → 'régler X' (locale-aware)."""
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceSet")(handler_input)
-
-    def handle(self, handler_input):
-        return _handle_voice_intent(handler_input, "VoiceSet")
-
-
-class VoiceQueryIntentHandler(AbstractRequestHandler):
-    """quelle est/what is/cuál es {X} → lecture valeur capteur Jeedom (locale-aware)."""
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceQuery")(handler_input)
-
-    def handle(self, handler_input):
-        return _handle_voice_intent(handler_input, "VoiceQuery")
-
-
-class VoiceFreeIntentHandler(AbstractRequestHandler):
-    """
-    Intent fourre-tout (fr-FR, fr-CA, en-US, es-ES) : sample "{Query}" seul, slot AMAZON.Person,
-    qui reçoit la phrase entière. Remplace les intents Voice* du modèle concerné.
-    Une question Jeedom n'est attendue que dans une session déjà ouverte (le Q/A
-    démarre par un LaunchRequest) : la phrase y vaut alors réponse libre (String).
-    """
-    def can_handle(self, handler_input):
-        return is_intent_name("VoiceFree")(handler_input)
-
-    def handle(self, handler_input):
-        query = (get_slot_value(handler_input, "Query") or "").strip()
-        if not query:
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre commande."))
-
-        # Réponse à « 1 : …, 2 : … lequel ? » (« le deuxième »)
-        if handler_input.attributes_manager.session_attributes.get("pending_voice_options"):
-            choice = _parse_choice(query)
-            if choice is not None:
-                return _resolve_voice_choice(handler_input, choice)
-
-        session = getattr(handler_input.request_envelope, "session", None)
-        if session is not None and getattr(session, "new", True) is False:
-            jee = JeeAsk(handler_input)
-            if isinstance(jee.jee_state, QuestionState):
-                logger.info("VoiceFree en Q/A → réponse libre")
-                return _handle_qa_response(handler_input, jee, jee.post_jee_event(query, RESPONSE_STRING))
-
-        locale_short = _locale_short(handler_input)
-        logger.info("VoiceFree[%s]: %s", locale_short, query)
-        return _dispatch_voice_query(handler_input, query, locale_short)
+        return _no_question_response(handler_input, jee)
 
 
 class YesIntentHandler(AbstractRequestHandler):
@@ -799,13 +461,11 @@ class YesIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("Yes Intent")
-        # « oui » à « Veux-tu dire : … ? » (une seule option en attente)
-        options = handler_input.attributes_manager.session_attributes.get("pending_voice_options")
-        if options:
-            return _resolve_voice_choice(handler_input, "1" if len(options) == 1 else "")
         jee = JeeAsk(handler_input)
-        speak_output = jee.post_jee_event(RESPONSE_YES, RESPONSE_YES)
-        return _handle_qa_response(handler_input, jee, speak_output)
+        guard = _qa_guard_no_question(handler_input, jee, "Yes")
+        if guard is not None:
+            return guard
+        return _handle_qa_response(handler_input, jee, jee.post_jee_event(RESPONSE_YES, RESPONSE_YES))
 
 
 class NoIntentHandler(AbstractRequestHandler):
@@ -814,15 +474,11 @@ class NoIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("No Intent")
-        # « non » à une confirmation / un choix en attente : rien n'est exécuté
-        sess = handler_input.attributes_manager.session_attributes
-        if sess.pop("pending_voice_options", None):
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return (handler_input.response_builder.speak(data.get(prompts.OKAY, "Okay"))
-                    .set_should_end_session(True).response)
         jee = JeeAsk(handler_input)
-        speak_output = jee.post_jee_event(RESPONSE_NO, RESPONSE_NO)
-        return _handle_qa_response(handler_input, jee, speak_output)
+        guard = _qa_guard_no_question(handler_input, jee, "No")
+        if guard is not None:
+            return guard
+        return _handle_qa_response(handler_input, jee, jee.post_jee_event(RESPONSE_NO, RESPONSE_NO))
 
 
 class NumericIntentHandler(AbstractRequestHandler):
@@ -831,77 +487,58 @@ class NumericIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         logger.info("Numeric Intent")
-        # « deux » (Numbers) ou « le deuxième » (Ordinal, AMAZON.Ordinal → "2")
-        number = get_slot_value(handler_input, "Numbers") or get_slot_value(handler_input, "Ordinal")
-        # Réponse à une désambiguïsation en cours
-        if handler_input.attributes_manager.session_attributes.get("pending_voice_options"):
-            return _resolve_voice_choice(handler_input, number)
         jee = JeeAsk(handler_input)
         guard = _qa_guard_no_question(handler_input, jee, "Numeric")
         if guard is not None:
             return guard
+        # « douze » (Numbers) ou « le deuxième » (Ordinal, AMAZON.Ordinal → "2")
+        number = get_slot_value(handler_input, "Numbers") or get_slot_value(handler_input, "Ordinal")
         if number in (None, "", "?"):
             jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
             data = handler_input.attributes_manager.request_attributes.get("_", {})
             return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Valeur invalide"))
-        speak_output = jee.post_jee_event(number, RESPONSE_NUMERIC)
-        return _handle_qa_response(handler_input, jee, speak_output)
+        return _handle_qa_response(handler_input, jee, jee.post_jee_event(number, RESPONSE_NUMERIC))
 
 
 class StringIntentHandler(AbstractRequestHandler):
+    """Réponse libre (« rouge », « le code est 1234 »…)."""
     def can_handle(self, handler_input):
         return is_intent_name("String")(handler_input)
 
     def handle(self, handler_input):
         logger.info("String Intent")
         jee = JeeAsk(handler_input)
-        strings = get_slot_value(handler_input, "Strings") or ""
-
-        # Hors contexte Q/A : aucune question active → le NLU a routé une commande
-        # vocale (sample "c'est {Strings}", "je dis {Strings}") vers String. On la
-        # traite comme une commande vocale au lieu de la POSTer comme réponse Q/A.
-        if not isinstance(jee.jee_state, QuestionState):
-            if strings:
-                logger.info("String hors Q/A → redispatch vocal: '%s'", strings)
-                return _dispatch_voice_query(handler_input, strings, _locale_short(handler_input))
+        guard = _qa_guard_no_question(handler_input, jee, "String")
+        if guard is not None:
+            return guard
+        strings = (get_slot_value(handler_input, "Strings") or "").strip()
+        if not strings:
+            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
             data = handler_input.attributes_manager.request_attributes.get("_", {})
             return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris."))
-
-        speak_output = jee.post_jee_event(strings, RESPONSE_STRING)
-        return _handle_qa_response(handler_input, jee, speak_output)
+        return _handle_qa_response(handler_input, jee, jee.post_jee_event(strings, RESPONSE_STRING))
 
 
 class SelectIntentHandler(AbstractRequestHandler):
+    """Choix parmi des propositions (« le salon », « je choisis la cuisine »)."""
     def can_handle(self, handler_input):
         return is_intent_name("Select")(handler_input)
 
     def handle(self, handler_input):
         logger.info("Select Intent")
         jee = JeeAsk(handler_input)
+        guard = _qa_guard_no_question(handler_input, jee, "Select")
+        if guard is not None:
+            return guard
+        data = handler_input.attributes_manager.request_attributes.get("_", {})
         selection = jee.get_value_for_slot("Selections") or get_slot_value(handler_input, "Selections")
-
-        # Hors contexte Q/A : aucune question Jeedom en attente. Le NLU a routé une
-        # commande/question vocale (ex: "la température du thermostat") vers Select
-        # à cause du sample générique "la {Selections}". On la traite comme une
-        # commande vocale normale au lieu de répondre "Vous avez choisi …".
-        if not isinstance(jee.jee_state, QuestionState):
-            if selection:
-                logger.info("Select hors Q/A → redispatch vocal: '%s'", selection)
-                return _dispatch_voice_query(handler_input, selection, _locale_short(handler_input))
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris."))
-
         if not selection:
             jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
             return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre sélection."))
 
         jee.post_jee_event(selection, RESPONSE_SELECT)
-        data = handler_input.attributes_manager.request_attributes.get("_", {})
-        template = data.get(prompts.SELECTED, "{}")
-        # post_jee_event a peut-être MAJ jee.jee_state (multi-tour) — on speak la
-        # confirmation "Vous avez choisi X" puis si nouvelle question, on la chaîne
-        confirmation = template.format(selection)
+        confirmation = data.get(prompts.SELECTED, "{}").format(selection)
+        # Nouvelle question enchaînée par le scénario (multi-tour)
         if isinstance(jee.jee_state, QuestionState) and jee.jee_state.text:
             return (handler_input.response_builder
                     .speak(confirmation + " " + jee.jee_state.text)
@@ -941,13 +578,14 @@ class DateTimeIntentHandler(AbstractRequestHandler):
         date = get_slot_value(handler_input, "Dates")
         time = get_slot_value(handler_input, "Times")
 
-        if not date and not time:
-            return _forward_misrouted_intent(handler_input, "Date", ("Dates", "Times"))
-
         jee = JeeAsk(handler_input)
         guard = _qa_guard_no_question(handler_input, jee, "Date")
         if guard is not None:
             return guard
+        if not date and not time:
+            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
+            data = handler_input.attributes_manager.request_attributes.get("_", {})
+            return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Date invalide"))
         payload = json.dumps({**self._parse_date(date), **self._parse_time(time)})
         speak_output = jee.post_jee_event(payload, RESPONSE_DATE_TIME)
         return _handle_qa_response(handler_input, jee, speak_output)
@@ -989,7 +627,7 @@ class DateTimeIntentHandler(AbstractRequestHandler):
 
 class RepeatIntentHandler(AbstractRequestHandler):
     """User dit 'répète' / 'redis' / 'pardon' → on reprononce la dernière question Ask.
-    Si pas de question en cache, fallback prompt direct."""
+    Sans question en attente, le dit et ferme la session."""
     def can_handle(self, handler_input):
         return is_intent_name("AMAZON.RepeatIntent")(handler_input)
 
@@ -998,10 +636,7 @@ class RepeatIntentHandler(AbstractRequestHandler):
         jee = JeeAsk(handler_input)  # re-fetch alexaAsk.json
         if isinstance(jee.jee_state, QuestionState) and jee.jee_state.text:
             return handler_input.response_builder.speak(jee.jee_state.text).ask("").response
-        # Pas de question en cache → prompt direct
-        data = handler_input.attributes_manager.request_attributes.get("_", {})
-        prompt_txt = data.get(prompts.DIRECT_PROMPT, "Que puis-je pour vous ?")
-        return handler_input.response_builder.speak(prompt_txt).ask(prompt_txt).response
+        return _no_question_response(handler_input, jee)
 
 
 class HelpIntentHandler(AbstractRequestHandler):
@@ -1105,13 +740,6 @@ class LocalizationInterceptor(AbstractRequestInterceptor):
 sb = SkillBuilder()
 
 sb.add_request_handler(LaunchRequestHandler())
-sb.add_request_handler(VoiceLaunchIntentHandler())
-sb.add_request_handler(VoiceTurnOnIntentHandler())
-sb.add_request_handler(VoiceTurnOffIntentHandler())
-sb.add_request_handler(VoiceSetIntentHandler())
-sb.add_request_handler(VoiceQueryIntentHandler())
-sb.add_request_handler(VoiceFreeIntentHandler())
-sb.add_request_handler(DisambiguationIntentHandler())
 sb.add_request_handler(YesIntentHandler())
 sb.add_request_handler(NoIntentHandler())
 sb.add_request_handler(StringIntentHandler())

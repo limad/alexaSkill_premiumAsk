@@ -1,16 +1,14 @@
 """
 Tests structurels des modèles d'interaction (interactionModels/custom/*.json).
 
-Objectifs :
-- Garantir que chaque locale supportée définit tous les intents Voice* + Disambiguation
-- Vérifier la cohérence (slots typés, samples non vides, carrier phrases pour SearchQuery)
-- Détecter les régressions silencieuses lors de l'ajout d'une locale ou d'un intent
+Le skill ne sert qu'à répondre aux questions des scénarios Jeedom : chaque
+locale définit les intents de réponse (oui/non, nombre, durée, date, choix,
+texte) et aucun intent de commande libre (rôle du skill Frida).
 
 Aucune dépendance externe — pure stdlib + pytest.
 """
 
 import json
-import os
 import re
 from pathlib import Path
 
@@ -21,45 +19,22 @@ SUPPORTED_LOCALES = ["en-AU", "en-CA", "en-GB", "en-IN", "en-US", "es-ES", "fr-C
 
 # Intents que CHAQUE locale doit définir
 REQUIRED_INTENTS = {
-    # Built-in Amazon
-    "AMAZON.HelpIntent",
-    "AMAZON.CancelIntent",
-    "AMAZON.StopIntent",
-    "AMAZON.FallbackIntent",
-    "AMAZON.RepeatIntent",
-    "AMAZON.YesIntent",
-    "AMAZON.NoIntent",
-    # Custom Q/A
-    "String",
-    "Select",
-    "Number",
-    # Voice control direct
-    "VoiceLaunch",
-    "VoiceTurnOn",
-    "VoiceTurnOff",
-    "VoiceSet",
-    "VoiceQuery",
-    # Disambiguation (item 2.3)
-    "DisambiguationIntent",
+    "AMAZON.HelpIntent", "AMAZON.CancelIntent", "AMAZON.StopIntent",
+    "AMAZON.FallbackIntent", "AMAZON.RepeatIntent", "AMAZON.YesIntent", "AMAZON.NoIntent",
+    "Number", "Duration", "Date", "Select", "String",
 }
 
-VOICE_INTENTS = {"VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet", "VoiceQuery"}
+# Slots attendus (noms lus par lambda_function.py)
+EXPECTED_SLOTS = {
+    "Number": [{"name": "Numbers", "type": "AMAZON.NUMBER"}, {"name": "Ordinal", "type": "AMAZON.Ordinal"}],
+    "Duration": [{"name": "Durations", "type": "AMAZON.DURATION"}],
+    "Date": [{"name": "Dates", "type": "AMAZON.DATE"}, {"name": "Times", "type": "AMAZON.TIME"}],
+    "Select": [{"name": "Selections", "type": "AMAZON.SearchQuery"}],
+    "String": [{"name": "Strings", "type": "AMAZON.Person"}],
+}
 
-# Locales à « intent fourre-tout » : VoiceFree remplace les intents Voice*
-FREE_QUERY_LOCALES = {"fr-FR", "fr-CA", "en-US", "es-ES"}
-
-
-def _required_intents(locale: str) -> set:
-    if locale in FREE_QUERY_LOCALES:
-        # Le choix « numéro 2 » / « deux » passe par VoiceFree et Number
-        return (REQUIRED_INTENTS - VOICE_INTENTS - {"DisambiguationIntent"}) | {"VoiceFree"}
-    return REQUIRED_INTENTS
-
-GENERIC_LEAD = re.compile(
-    r"(le|la|les|l'|c'est|dis|à"          # fr
-    r"|the|it is|it's|say|at"             # en
-    r"|el|los|las|es|di|a las) \{\w+\}"  # es
-)
+# Réponses nues indispensables (« douze », « dix minutes », « demain », « rouge »)
+BARE_SAMPLES = {"Number": "{Numbers}", "Duration": "{Durations}", "Date": "{Dates}", "String": "{Strings}"}
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "interactionModels" / "custom"
 
@@ -94,98 +69,36 @@ def test_invocation_name_lowercase_alphanumeric(locale):
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
-def test_all_required_intents_present(locale):
-    model = _load_model(locale)
-    intents = _intents_by_name(model)
-    missing = _required_intents(locale) - set(intents.keys())
+def test_qa_intents_only(locale):
+    intents = set(_intents_by_name(_load_model(locale)))
+    missing = REQUIRED_INTENTS - intents
     assert not missing, f"{locale}: intents manquants {missing}"
+    extra = intents - REQUIRED_INTENTS - {"AMAZON.NavigateHomeIntent"}
+    assert not extra, f"{locale}: intents en trop (commandes libres → Frida) {extra}"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
-def test_voice_intents_have_searchquery_carrier_phrases(locale):
-    """
-    AMAZON.SearchQuery exige une carrier phrase (verbe avant le slot).
-    Échec courant : sample = "{Command}" seul → rejet par Amazon au build.
-    """
-    if locale in FREE_QUERY_LOCALES:
-        pytest.skip("intents Voice* remplacés par VoiceFree")
+def test_answer_slots(locale):
     intents = _intents_by_name(_load_model(locale))
-    for name in ("VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet"):
-        intent = intents[name]
-        assert intent.get("slots"), f"{locale}/{name}: pas de slot"
-        slot = intent["slots"][0]
-        assert slot["type"] == "AMAZON.SearchQuery", f"{locale}/{name}: slot doit être SearchQuery"
-        assert slot["name"] == "Command"
-        assert intent["samples"], f"{locale}/{name}: aucun sample"
-        for sample in intent["samples"]:
-            assert "{Command}" in sample, f"{locale}/{name}: sample sans {{Command}}: {sample}"
-            # Carrier phrase = au moins 1 mot avant le slot
-            before = sample.split("{Command}")[0].strip()
-            assert before, f"{locale}/{name}: sample sans verbe carrier: '{sample}'"
+    for name, slots in EXPECTED_SLOTS.items():
+        assert intents[name]["slots"] == slots, f"{locale}/{name}: slots {intents[name]['slots']}"
+        for sample in intents[name]["samples"]:
+            used = set(re.findall(r"\{(\w+)\}", sample))
+            assert used and used <= {s["name"] for s in slots}, f"{locale}/{name}: sample {sample!r}"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
-def test_voice_query_intent_uses_query_slot(locale):
-    """VoiceQuery doit utiliser le slot Query lu par lambda_function.py."""
-    if locale in FREE_QUERY_LOCALES:
-        pytest.skip("intents Voice* remplacés par VoiceFree")
+def test_bare_answers_accepted(locale):
     intents = _intents_by_name(_load_model(locale))
-    intent = intents["VoiceQuery"]
-    assert intent.get("slots"), f"{locale}/VoiceQuery: pas de slot"
-    slot = intent["slots"][0]
-    assert slot["type"] == "AMAZON.SearchQuery", f"{locale}/VoiceQuery: slot doit être SearchQuery"
-    assert slot["name"] == "Query"
-    assert intent["samples"], f"{locale}/VoiceQuery: aucun sample"
-    for sample in intent["samples"]:
-        assert "{Query}" in sample, f"{locale}/VoiceQuery: sample sans {{Query}}: {sample}"
-        before = sample.split("{Query}")[0].strip()
-        assert before, f"{locale}/VoiceQuery: sample sans carrier phrase: '{sample}'"
-
-
-@pytest.mark.parametrize("locale", sorted(FREE_QUERY_LOCALES))
-def test_voice_free_intent_is_bare_person_slot(locale):
-    """VoiceFree : sample "{Query}" seul, slot AMAZON.Person (reçoit la phrase entière)."""
-    intents = _intents_by_name(_load_model(locale))
-    assert not (VOICE_INTENTS & set(intents)), f"{locale}: intents Voice* encore présents"
-    assert "DisambiguationIntent" not in intents, f"{locale}: DisambiguationIntent capte les questions libres"
-    # « à quelle heure… » / « pour combien de temps… » : réponses date/durée reçues en texte
-    assert not ({"Date", "Duration"} & set(intents)), f"{locale}: Date/Duration captent les questions libres"
-    # « le deuxième » / « the second one » : ordinal capté par Number
-    assert {"name": "Ordinal", "type": "AMAZON.Ordinal"} in intents["Number"]["slots"], \
-        f"{locale}/Number: slot Ordinal absent"
-    intent = intents["VoiceFree"]
-    assert intent["slots"] == [{"name": "Query", "type": "AMAZON.Person"}]
-    assert intent["samples"] == ["{Query}"]
-    # Un autre exemple réduit au seul slot capterait les phrases libres (sauf Number,
-    # gardé pour répondre « deux » à un choix)
-    for name, it in intents.items():
-        if name in ("VoiceFree", "Number"):
-            continue
-        bare = [s for s in it.get("samples", []) if re.fullmatch(r"\{\w+\}", s)]
-        assert not bare, f"{locale}/{name}: exemple nu {bare}"
-        # Amorce trop courante dans une phrase libre (« le volet… », « c'est quoi… »,
-        # « the light… », « el salón… »)
-        generic = [s for s in it.get("samples", []) if GENERIC_LEAD.fullmatch(s)]
-        assert not generic, f"{locale}/{name}: amorce générique {generic}"
+    for name, sample in BARE_SAMPLES.items():
+        assert sample in intents[name]["samples"], f"{locale}/{name}: réponse nue {sample} absente"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
-def test_disambiguation_intent_uses_amazon_number(locale):
-    """DisambiguationIntent doit avoir un slot Choice typé AMAZON.NUMBER."""
-    if locale in FREE_QUERY_LOCALES:
-        pytest.skip("DisambiguationIntent retiré (choix via VoiceFree / Number)")
-    intents = _intents_by_name(_load_model(locale))
-    intent = intents["DisambiguationIntent"]
-    assert intent["slots"], f"{locale}: DisambiguationIntent sans slot"
-    slot = intent["slots"][0]
-    assert slot["name"] == "Choice", f"{locale}: slot doit s'appeler Choice"
-    assert slot["type"] == "AMAZON.NUMBER", f"{locale}: slot Choice doit être AMAZON.NUMBER"
-    assert intent["samples"], f"{locale}: aucun sample pour DisambiguationIntent"
-    # Au moins un sample doit utiliser le slot
-    assert any("{Choice}" in s for s in intent["samples"]), \
-        f"{locale}: aucun sample utilisant {{Choice}}"
-    assert "{Choice}" not in intent["samples"], \
-        f"{locale}: sample nu {{Choice}} trop large, risque de faux match"
+def test_search_query_has_carrier_phrase(locale):
+    """AMAZON.SearchQuery exige au moins un mot avant le slot (sinon build refusé)."""
+    for sample in _intents_by_name(_load_model(locale))["Select"]["samples"]:
+        assert sample.split("{Selections}")[0].strip(), f"{locale}/Select: sample sans amorce {sample!r}"
 
 
 @pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
@@ -215,22 +128,3 @@ def test_yes_no_samples_not_overlapping(locale):
     no_samples = set(s.lower().strip() for s in no.get("samples", []) or [])
     overlap = yes_samples & no_samples
     assert not overlap, f"{locale}: samples ambigus Yes/No: {overlap}"
-
-
-@pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
-def test_voice_intent_samples_distinct_across_intents(locale):
-    """
-    Les verbes carriers de Voice* doivent être différenciés sinon collision NLU
-    (ex: "allume X" doit être seulement dans VoiceTurnOn, pas aussi VoiceLaunch).
-    """
-    if locale in FREE_QUERY_LOCALES:
-        pytest.skip("intents Voice* remplacés par VoiceFree")
-    intents = _intents_by_name(_load_model(locale))
-    voice_names = ("VoiceLaunch", "VoiceTurnOn", "VoiceTurnOff", "VoiceSet")
-    samples_by_intent = {n: set(s.lower() for s in intents[n].get("samples", [])) for n in voice_names}
-    for n1 in voice_names:
-        for n2 in voice_names:
-            if n1 >= n2:
-                continue
-            overlap = samples_by_intent[n1] & samples_by_intent[n2]
-            assert not overlap, f"{locale}: samples partagés entre {n1} et {n2}: {overlap}"

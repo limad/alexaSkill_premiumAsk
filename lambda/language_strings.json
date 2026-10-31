@@ -5,17 +5,16 @@
     "ERROR_400": "Could not communicate with Jeedom. Please check the Amazon CloudWatch logs in the custom skill developer console.",
     "ERROR_ACOUSTIC": "Sorry I did not catch that... <break time='200ms'/> {}",
     "ERROR_CONFIG": "Sorry, I am having trouble, please check your configuration, in the custom skill and try again.",
-    "HELP_MESSAGE": "This skill should be only reactively while triggered via Jeedom.",
+    "HELP_MESSAGE": "I answer the questions asked by your Jeedom scenarios. Reply with yes, no, a number, a duration, a date or a word.",
     "OKAY": "Okay",
     "STRING": "You selected {}",
     "SELECTED": "You selected {}",
     "SKILL_NAME": "Jeedom custom actions",
     "STOP_MESSAGE": "Goodbye!",
     "WELCOME_MESSAGE": "Welcome to {}. Input text is: {}",
-    "DIRECT_PROMPT": "What can I do for you?",
     "HINT_TEXT": "say yes, no, or stop",
     "NO_MATCH": "Sorry, I couldn't find a command matching your request.",
-    "INVALID_CHOICE": "Invalid choice, say the number of the command."
+    "NO_QUESTION": "There is no pending question. To control Jeedom by voice, say: Alexa, ask frida assistant."
   },
   "de": {
     "ERROR_401": "Ich habe scheinbar keine Berechtigungen für die verbindung zu Jeedom. Bitte prüfe deinen H A Benutzer oder Access Token.",
@@ -23,17 +22,16 @@
     "ERROR_400": "Ich kann keine Verbindung zum Jeedom vornehmen. Bitte prüfe die Amazon CloudWatch logdateien in der Alexa Entwickler Console.",
     "ERROR_ACOUSTIC": "Das habe ich leider nicht verstanden... <break time='200ms'/> {}",
     "ERROR_CONFIG": "Entschuldige, hier ist etwas schief gelaufen. Bitte prüfe deine Konfiugration im custom skill und versuche es erneut.",
-    "HELP_MESSAGE": "Dieser Skill sollte nur reaktiv genutzt werden, wenn er via Jeedom angestossen wird",
+    "HELP_MESSAGE": "Ich beantworte die Fragen deiner Jeedom-Szenarien. Antworte mit ja, nein, einer Zahl, einer Dauer, einem Datum oder einem Wort.",
     "OKAY": "Okay",
     "STRING": "Du hast {} gewählt",
     "SELECTED": "Du hast {} gewählt",
     "SKILL_NAME": "Jeedom custom actions",
     "STOP_MESSAGE": "Machs gut!",
     "WELCOME_MESSAGE": "Willkommen bei {}. Der input text ist: {}",
-    "DIRECT_PROMPT": "Was kann ich für Sie tun?",
     "HINT_TEXT": "sagen Sie ja, nein oder stopp",
     "NO_MATCH": "Ich konnte keinen passenden Befehl für Ihre Anfrage finden.",
-    "INVALID_CHOICE": "Ungültige Auswahl, nenne die Nummer des Befehls."
+    "NO_QUESTION": "Es gibt keine offene Frage. Um Jeedom per Sprache zu steuern, sage: Alexa, frage frida assistent."
   },
   "fr": {
     "ERROR_401": "Il semblerait que je ne sois pas authorisée à accéder à Jeedom, veuillez verifier la configuration de votre skill, la clé API et essayez à nouveau.",
@@ -41,17 +39,16 @@
     "ERROR_400": "Impossible de communiquer avec Jeedom. Veuillez verifier les logs Amazon CloudWAtch dans la console de développement de votre skill.",
     "ERROR_ACOUSTIC": "Désolé je n'ai pas compris... <break time='200ms'/> {}.",
     "ERROR_CONFIG": "Désolé, j'ai quelques problèmes, veuillez verifier la configuration de votre skill et essayez à nouveau.",
-    "HELP_MESSAGE": "Cette skill ne devrait être seulement réactive que depuis un appel de Jeedom",
+    "HELP_MESSAGE": "Je réponds aux questions posées par vos scénarios Jeedom. Répondez par oui, non, un nombre, une durée, une date ou un mot.",
     "OKAY": "Okay",
     "STRING": "Vous avez choisi {}",
     "SELECTED": "Vous avez choisi {}",
     "SKILL_NAME": "Jeedom custom actions",
     "STOP_MESSAGE": "Au revoir!",
     "WELCOME_MESSAGE": "Bienvenue sur {}. Le champ texte est: {}",
-    "DIRECT_PROMPT": "Que puis-je pour vous ?",
     "HINT_TEXT": "dire oui, non, ou arrête",
     "NO_MATCH": "Aucune commande trouvée pour cette demande.",
-    "INVALID_CHOICE": "Choix invalide, dis le numéro de la commande."
+    "NO_QUESTION": "Aucune question en attente. Pour piloter Jeedom à la voix, dites : Alexa, demande à assistant frida."
   },
   "it": {
     "ERROR_401": "Problema con le autorizzazioni di accesso ad Jeedom: controllare l'account collegato o eventuali token utilizzati e riprovare",
@@ -59,17 +56,16 @@
     "ERROR_400": "Impossibile accedere ad Jeedom. Controllare i logs su Amazon CloudWatch nella custom skill developer console.",
     "ERROR_ACOUSTIC": "Mi dispiace, non ho capito... <break time='200ms'/> {}",
     "ERROR_CONFIG": "Mi dispiace, c'e' qualche problema, per favore controlla la configurazione della custom skill e riprova.",
-    "HELP_MESSAGE": "Questa skill dovrebbe rispondere solo quando attivata da Jeedom.",
+    "HELP_MESSAGE": "Rispondo alle domande poste dai tuoi scenari Jeedom. Rispondi con sì, no, un numero, una durata, una data o una parola.",
     "OKAY": "Okay",
     "STRING": "Hai selezionato {}",
     "SELECTED": "Hai selezionato {}",
     "SKILL_NAME": "Jeedom Austom Actions",
     "STOP_MESSAGE": "A presto!",
     "WELCOME_MESSAGE": "Benvenuto su {}. Il testo specificato e': {}",
-    "DIRECT_PROMPT": "Cosa posso fare per te?",
     "HINT_TEXT": "dire sì, no o fermati",
     "NO_MATCH": "Nessun comando trovato per questa richiesta.",
-    "INVALID_CHOICE": "Scelta non valida, di' il numero del comando."
+    "NO_QUESTION": "Nessuna domanda in attesa. Per controllare Jeedom con la voce, di': Alexa, chiedi a assistente frida."
   },
   "pt": {
     "ERROR_401": "Parece que eu não estou autorizada a acessar seu Jeedom. Verifique as credenciais e tente novamente.",
@@ -77,17 +73,16 @@
     "ERROR_400": "Não consigo me conectar ao Jeedom. Por favor, cheque os registros no painel de desenvolvimento desta minha habilidade.",
     "ERROR_ACOUSTIC": "Desculpe, não entendi... <break time='200ms'/> {}",
     "ERROR_CONFIG": "Desculpe, estou com problemas. Por favor, cheque suas configurações nesta minha habilidade e tente novamente.",
-    "HELP_MESSAGE": "Essa habilidade deve ser acionada reativamente quando invocada pelo Jeedom.",
+    "HELP_MESSAGE": "Respondo às perguntas feitas pelos seus cenários Jeedom. Responda com sim, não, um número, uma duração, uma data ou uma palavra.",
     "OKAY": "Tudo bem",
     "STRING": "Você escolheu {}",
     "SELECTED": "Você escolheu {}",
     "SKILL_NAME": "Jeedom, ações customizadas",
     "STOP_MESSAGE": "Tchau!",
     "WELCOME_MESSAGE": "Bem vindo ao {}. A entrada de texto é: {}",
-    "DIRECT_PROMPT": "O que posso fazer por você?",
     "HINT_TEXT": "diga sim, não ou pare",
     "NO_MATCH": "Nenhum comando encontrado para esta solicitação.",
-    "INVALID_CHOICE": "Opção inválida, diga o número do comando."
+    "NO_QUESTION": "Nenhuma pergunta pendente. Para controlar o Jeedom por voz, diga: Alexa, pergunte ao assistente frida."
   },
   "es": {
     "ERROR_401": "Parece que no tengo permisos para acceder a Jeedom. Por favor, comprueba el enlace de cuenta o el token de acceso y vuelve a intentarlo.",
@@ -95,17 +90,16 @@
     "ERROR_400": "No puedo comunicarme con Jeedom. Por favor, comprueba los registros de Amazon CloudWatch en la consola de desarrollo de habilidades personalizadas.",
     "ERROR_ACOUSTIC": "Lo siento, no he entendido... <break time='200ms'/> {}",
     "ERROR_CONFIG": "Lo siento, tengo problemas, por favor, comprueba tu configuración en la habilidad personalizada y vuelve a intentarlo.",
-    "HELP_MESSAGE": "Esta skill debería de responder solo cuando se invoque desde Jeedom.",
+    "HELP_MESSAGE": "Respondo a las preguntas de tus escenarios de Jeedom. Contesta con sí, no, un número, una duración, una fecha o una palabra.",
     "OKAY": "Okay",
     "STRING": "Has seleccionado {}",
     "SELECTED": "Has seleccionado {}",
     "SKILL_NAME": "Jeedom custom actions",
     "STOP_MESSAGE": "Adiós!",
     "WELCOME_MESSAGE": "Bienvenido a {}. El texto de entrada es: {}",
-    "DIRECT_PROMPT": "¿En qué puedo ayudarle?",
     "HINT_TEXT": "diga sí, no o para",
     "NO_MATCH": "No se encontró ningún comando para esta solicitud.",
-    "INVALID_CHOICE": "Opción no válida, di el número del comando."
+    "NO_QUESTION": "No hay ninguna pregunta pendiente. Para controlar Jeedom con la voz, di: Alexa, pregunta a asistente frida."
   },
   "fr-FR": {
     "SKILL_NAME": "Actionable notifications"

@@ -1,131 +1,161 @@
 {
-    "interactionModel": {
-        "languageModel": {
-            "intents": [
-                {
-                    "name": "AMAZON.CancelIntent",
-                    "samples": []
-                },
-                {
-                    "name": "AMAZON.HelpIntent",
-                    "samples": []
-                },
-                {
-                    "name": "AMAZON.StopIntent",
-                    "samples": []
-                },
-                {
-                    "name": "AMAZON.NavigateHomeIntent",
-                    "samples": []
-                },
-                {
-                    "name": "AMAZON.FallbackIntent",
-                    "samples": []
-                },
-                {
-                    "name": "AMAZON.YesIntent",
-                    "samples": [
-                        "yes",
-                        "yeah",
-                        "yep",
-                        "ok",
-                        "okay",
-                        "sure",
-                        "right",
-                        "exact",
-                        "affirmative",
-                        "totally",
-                        "valid"
-                    ]
-                },
-                {
-                    "name": "AMAZON.NoIntent",
-                    "samples": [
-                        "no",
-                        "nope",
-                        "not at all",
-                        "negative",
-                        "never",
-                        "no thanks",
-                        "no way",
-                        "cancel"
-                    ]
-                },
-                {
-                    "name": "AMAZON.RepeatIntent",
-                    "samples": [
-                        "repeat",
-                        "say again",
-                        "again",
-                        "i did not catch that",
-                        "pardon"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Strings",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "String",
-                    "samples": [
-                        "i say {Strings}",
-                        "the answer is {Strings}",
-                        "my answer is {Strings}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Selections",
-                            "type": "AMAZON.SearchQuery"
-                        }
-                    ],
-                    "name": "Select",
-                    "samples": [
-                        "i choose {Selections}",
-                        "select {Selections}",
-                        "pick {Selections}",
-                        "choose {Selections}"
-                    ]
-                },
-                {
-                    "slots": [
-                        {
-                            "name": "Numbers",
-                            "type": "AMAZON.NUMBER"
-                        },
-                        {
-                            "name": "Ordinal",
-                            "type": "AMAZON.Ordinal"
-                        }
-                    ],
-                    "name": "Number",
-                    "samples": [
-                        "{Numbers}",
-                        "it is {Numbers}",
-                        "the number {Numbers}",
-                        "number {Numbers}",
-                        "the {Ordinal}",
-                        "the {Ordinal} one"
-                    ]
-                },
-                {
-                    "name": "VoiceFree",
-                    "slots": [
-                        {
-                            "name": "Query",
-                            "type": "AMAZON.Person"
-                        }
-                    ],
-                    "samples": [
-                        "{Query}"
-                    ]
-                }
-            ],
-            "types": [],
-            "invocationName": "jeedom"
+  "interactionModel": {
+    "languageModel": {
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": [
+            "yes",
+            "yeah",
+            "yep",
+            "ok",
+            "okay",
+            "sure",
+            "right",
+            "exact",
+            "affirmative",
+            "totally",
+            "valid"
+          ]
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": [
+            "no",
+            "nope",
+            "not at all",
+            "negative",
+            "never",
+            "no thanks",
+            "no way",
+            "cancel"
+          ]
+        },
+        {
+          "name": "AMAZON.RepeatIntent",
+          "samples": [
+            "repeat",
+            "say again",
+            "again",
+            "i did not catch that",
+            "pardon"
+          ]
+        },
+        {
+          "name": "Number",
+          "slots": [
+            {
+              "name": "Numbers",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "Ordinal",
+              "type": "AMAZON.Ordinal"
+            }
+          ],
+          "samples": [
+            "{Numbers}",
+            "it is {Numbers}",
+            "the number {Numbers}",
+            "number {Numbers}",
+            "the {Ordinal}",
+            "the {Ordinal} one"
+          ]
+        },
+        {
+          "name": "Duration",
+          "slots": [
+            {
+              "name": "Durations",
+              "type": "AMAZON.DURATION"
+            }
+          ],
+          "samples": [
+            "{Durations}",
+            "for {Durations}",
+            "during {Durations}",
+            "for a duration of {Durations}",
+            "in {Durations}"
+          ]
+        },
+        {
+          "name": "Date",
+          "slots": [
+            {
+              "name": "Dates",
+              "type": "AMAZON.DATE"
+            },
+            {
+              "name": "Times",
+              "type": "AMAZON.TIME"
+            }
+          ],
+          "samples": [
+            "{Dates}",
+            "{Times}",
+            "at {Times}",
+            "on {Dates}",
+            "for {Dates}",
+            "for {Times}",
+            "{Dates} at {Times}",
+            "on {Dates} at {Times}"
+          ]
+        },
+        {
+          "name": "Select",
+          "slots": [
+            {
+              "name": "Selections",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "the {Selections}",
+            "i choose {Selections}",
+            "i pick {Selections}",
+            "select {Selections}",
+            "pick {Selections}",
+            "choose {Selections}"
+          ]
+        },
+        {
+          "name": "String",
+          "slots": [
+            {
+              "name": "Strings",
+              "type": "AMAZON.Person"
+            }
+          ],
+          "samples": [
+            "{Strings}",
+            "it is {Strings}",
+            "i say {Strings}",
+            "the answer is {Strings}",
+            "my answer is {Strings}"
+          ]
         }
+      ],
+      "invocationName": "jeedom"
     }
+  }
 }

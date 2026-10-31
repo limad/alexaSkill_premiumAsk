@@ -5,7 +5,7 @@ parlée est aussi affiché à l'écran, avec la phrase de l'utilisateur en titre
 
 Un seul point d'entrée : AplResponseInterceptor, branché en intercepteur de
 réponse global ; les handlers n'ont rien à faire. Le titre vient de
-request_attributes["apl_title"] (posé par _dispatch_voice_query), sinon "Jeedom".
+request_attributes["apl_title"], sinon "Jeedom".
 """
 import html
 import re

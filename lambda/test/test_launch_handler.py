@@ -1,10 +1,10 @@
 """
-E.3 — Tests de LaunchRequestHandler : hint + modes A (Q/A) et B (contrôle direct).
+E.3 — Tests de LaunchRequestHandler.
 
-Mode A : jee.jee_state est un QuestionState avec text → Alexa speak la question,
-         session reste ouverte (ask), hint injecté.
-Mode B : jee.jee_state n'est PAS un QuestionState → Alexa speak DIRECT_PROMPT,
-         session reste ouverte (ask), hint injecté.
+Question en attente : jee.jee_state est un QuestionState avec text → Alexa
+         prononce la question, session ouverte (ask), hint injecté.
+Sans question : Alexa dit NO_QUESTION (ou l'erreur de lecture Jeedom) et
+         ferme la session — ce skill ne prend pas de commande libre.
 
 Mocks ask_sdk_core via conftest.py.
 """
@@ -34,7 +34,7 @@ def _make_handler_input(locale="fr-FR", request_attrs=None):
     hi.attributes_manager.request_attributes = request_attrs or {
         "_": {
             "HINT_TEXT": "dire oui, non, ou arrête",
-            "DIRECT_PROMPT": "Que puis-je pour vous ?",
+            "NO_QUESTION": "Aucune question en attente.",
             "ERROR_CONFIG": "Erreur config.",
         }
     }
@@ -100,47 +100,22 @@ class TestLaunchModeA:
             assert hint_arg == "custom hint"
 
 
-class TestLaunchModeB:
-    """Mode B : alexaAsk.json vide ou absent → contrôle direct."""
+class TestLaunchNoQuestion:
+    """alexaAsk.json vide ou absent : rien à demander."""
 
-    def _state_b(self, lambda_mod):
-        """jee_state qui n'est PAS un QuestionState → Mode B."""
-        return lambda_mod.QuestionStateError(text="Erreur config.")
-
-    def test_speaks_direct_prompt(self, lambda_mod):
-        hi = _make_handler_input()
-        with patch.object(lambda_mod, "JeeAsk") as MockJee:
-            MockJee.return_value.jee_state = self._state_b(lambda_mod)
-            lambda_mod.LaunchRequestHandler().handle(hi)
-        hi.response_builder.speak.assert_called_once_with("Que puis-je pour vous ?")
-
-    def test_ask_with_direct_prompt(self, lambda_mod):
-        hi = _make_handler_input()
-        with patch.object(lambda_mod, "JeeAsk") as MockJee:
-            MockJee.return_value.jee_state = self._state_b(lambda_mod)
-            lambda_mod.LaunchRequestHandler().handle(hi)
-        hi.response_builder.ask.assert_called_once_with("Que puis-je pour vous ?")
-
-    def test_hint_injected_in_mode_b(self, lambda_mod):
-        hi = _make_handler_input()
-        with patch.object(lambda_mod, "JeeAsk") as MockJee:
-            MockJee.return_value.jee_state = self._state_b(lambda_mod)
-            lambda_mod.LaunchRequestHandler().handle(hi)
-        hi.response_builder.add_directive.assert_called_once()
-
-    def test_direct_prompt_from_data(self, lambda_mod):
-        hi = _make_handler_input(request_attrs={"_": {
-            "HINT_TEXT": "dire arrête",
-            "DIRECT_PROMPT": "Custom prompt ?",
-        }})
-        with patch.object(lambda_mod, "JeeAsk") as MockJee:
-            MockJee.return_value.jee_state = self._state_b(lambda_mod)
-            lambda_mod.LaunchRequestHandler().handle(hi)
-        hi.response_builder.speak.assert_called_once_with("Custom prompt ?")
-
-    def test_mode_b_when_jee_state_is_none(self, lambda_mod):
+    def test_says_no_question_and_ends_session(self, lambda_mod):
         hi = _make_handler_input()
         with patch.object(lambda_mod, "JeeAsk") as MockJee:
             MockJee.return_value.jee_state = None
             lambda_mod.LaunchRequestHandler().handle(hi)
-        hi.response_builder.speak.assert_called_once_with("Que puis-je pour vous ?")
+        hi.response_builder.speak.assert_called_once_with("Aucune question en attente.")
+        hi.response_builder.set_should_end_session.assert_called_once_with(True)
+        hi.response_builder.ask.assert_not_called()
+
+    def test_jeedom_error_is_spoken(self, lambda_mod):
+        hi = _make_handler_input()
+        with patch.object(lambda_mod, "JeeAsk") as MockJee:
+            MockJee.return_value.jee_state = lambda_mod.QuestionStateError(text="Jeedom injoignable")
+            lambda_mod.LaunchRequestHandler().handle(hi)
+        hi.response_builder.speak.assert_called_once_with("Jeedom injoignable")
+        hi.response_builder.set_should_end_session.assert_called_once_with(True)
