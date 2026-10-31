@@ -130,3 +130,34 @@ class TestWithQuestion:
             getattr(lambda_mod, handler)().handle(hi)
         inst.post_jee_event.assert_called_once_with("ResponseNone", "ResponseNone")
         assert hi.response_builder.speak.called
+
+
+class TestSessionEnded:
+    """Session fermée sans réponse : le scénario doit recevoir « pas de réponse »."""
+
+    def _ended(self, lambda_mod, reason):
+        hi = _make_handler_input(None)
+        hi.request_envelope.request.reason = reason
+        return hi
+
+    def test_posts_none_when_question_pending(self, lambda_mod):
+        hi = self._ended(lambda_mod, lambda_mod.SessionEndedReason.EXCEEDED_MAX_REPROMPTS)
+        with patch.object(lambda_mod, "JeeAsk") as MockJee:
+            inst = _mock_jee(MockJee, _question(lambda_mod))
+            lambda_mod.SessionEndedRequestHandler().handle(hi)
+        MockJee.assert_called_once_with(hi)  # question rechargée
+        inst.post_jee_event.assert_called_once_with(lambda_mod.RESPONSE_NONE, lambda_mod.RESPONSE_NONE)
+
+    def test_nothing_posted_without_question(self, lambda_mod):
+        hi = self._ended(lambda_mod, lambda_mod.SessionEndedReason.USER_INITIATED)
+        with patch.object(lambda_mod, "JeeAsk") as MockJee:
+            inst = _mock_jee(MockJee, None)
+            lambda_mod.SessionEndedRequestHandler().handle(hi)
+        inst.post_jee_event.assert_not_called()
+
+    def test_error_reason_does_not_post(self, lambda_mod):
+        hi = self._ended(lambda_mod, lambda_mod.SessionEndedReason.ERROR)
+        with patch.object(lambda_mod, "JeeAsk") as MockJee:
+            inst = _mock_jee(MockJee, _question(lambda_mod))
+            lambda_mod.SessionEndedRequestHandler().handle(hi)
+        inst.post_jee_event.assert_not_called()

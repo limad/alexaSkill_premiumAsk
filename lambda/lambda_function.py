@@ -19,9 +19,9 @@ from urllib3 import HTTPResponse
 from urllib3.util.retry import Retry
 
 
-# Parseur ISO-8601 duration (remplace isodate) — couvre PT#H#M#S, PxxY/M/D, combiné
+# Parseur ISO-8601 duration (remplace isodate) — couvre PT#H#M#S, PxxY/M/W/D, combiné
 _ISO_DUR_RE = re.compile(
-    r"^P(?:(?P<y>\d+)Y)?(?:(?P<mo>\d+)M)?(?:(?P<d>\d+)D)?"
+    r"^P(?:(?P<y>\d+)Y)?(?:(?P<mo>\d+)M)?(?:(?P<w>\d+)W)?(?:(?P<d>\d+)D)?"
     r"(?:T(?:(?P<h>\d+)H)?(?:(?P<m>\d+)M)?(?:(?P<s>\d+(?:\.\d+)?)S)?)?$"
 )
 
@@ -37,6 +37,7 @@ def _parse_iso_duration_seconds(duration: Optional[str]) -> float:
     total = 0.0
     total += int(g["y"] or 0) * 365 * 86400
     total += int(g["mo"] or 0) * 30 * 86400
+    total += int(g["w"] or 0) * 7 * 86400
     total += int(g["d"] or 0) * 86400
     total += int(g["h"] or 0) * 3600
     total += int(g["m"] or 0) * 60
@@ -103,6 +104,8 @@ try:
     _RETRY = Retry(allowed_methods=frozenset(["GET"]), **_RETRY_KW)
 except TypeError:
     _RETRY = Retry(method_whitelist=frozenset(["GET"]), **_RETRY_KW)
+
+POST_TIMEOUT = urllib3.Timeout(connect=2.0, read=5.5)
 
 HTTP = urllib3.PoolManager(
     cert_reqs="CERT_REQUIRED" if VERIFY_SSL else "CERT_NONE",
@@ -363,7 +366,9 @@ class JeeAsk:
 
         # Sauvegarder le flag avant l'appel (car `_request` peut remplacer jee_state par une erreur)
         suppress = self.jee_state.suppress_confirmation
-        response = self._request("POST", RESPONSE_URL, body=body)
+        # askResponse.php attend jusqu'à 2,5 s une question suivante avant de répondre :
+        # 3 s ne laissaient presque rien au traitement Jeedom (Alexa coupe à 8 s).
+        response = self._request("POST", RESPONSE_URL, body=body, timeout=POST_TIMEOUT)
         if response is None:
             # `_request` a mis un QuestionStateError → on dit son text à l'utilisateur
             if isinstance(self.jee_state, QuestionStateError):
@@ -684,8 +689,11 @@ class SessionEndedRequestHandler(AbstractRequestHandler):
         logger.info("Session Ended")
         reason = handler_input.request_envelope.request.reason
         if reason in (SessionEndedReason.EXCEEDED_MAX_REPROMPTS, SessionEndedReason.USER_INITIATED):
-            jee = JeeAsk(handler_input, fetch_question=False)
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
+            # Recharge la question en attente : sans elle, rien n'est envoyé et le
+            # scénario ne reçoit jamais « pas de réponse » (comportement de l'original).
+            jee = JeeAsk(handler_input)
+            if isinstance(jee.jee_state, QuestionState):
+                jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
         return handler_input.response_builder.response
 
 

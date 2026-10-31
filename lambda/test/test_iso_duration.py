@@ -55,6 +55,8 @@ def parse_dur():
     ("P1D", 86400.0),
     ("P1DT12H", 86400.0 + 12 * 3600),
     ("P7D", 7 * 86400.0),
+    ("P2W", 14 * 86400.0),          # « deux semaines » (donnait 0)
+    ("P1W2D", 9 * 86400.0),
 ])
 def test_parse_iso_duration(parse_dur, inp, expected):
     assert parse_dur(inp) == expected
