@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Affichage APL (Echo Show, Echo Spot, Fire TV) : le texte de chaque réponse
-parlée est aussi affiché à l'écran, avec la phrase de l'utilisateur en titre.
+parlée est aussi affiché à l'écran, sous le nom du skill.
 
 Un seul point d'entrée : AplResponseInterceptor, branché en intercepteur de
-réponse global ; les handlers n'ont rien à faire. Le titre vient de
-request_attributes["apl_title"], sinon "Jeedom".
+réponse global ; les handlers n'ont rien à faire.
 """
 import html
 import re
@@ -14,7 +13,7 @@ from ask_sdk_core.dispatch_components import AbstractResponseInterceptor
 from ask_sdk_model.interfaces.alexa.presentation.apl import RenderDocumentDirective
 
 TOKEN = "jeedomReply"
-TITLE_ATTR = "apl_title"
+TITLE = "premiumAsk"  # nom du skill (fiche identique dans toutes les langues)
 
 DOCUMENT = {
     "type": "APL",
@@ -72,14 +71,6 @@ def speech_text(response) -> str:
     return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw))).strip()
 
 
-def set_title(handler_input, title: str) -> None:
-    """Titre de la carte : la phrase de l'utilisateur."""
-    try:
-        handler_input.attributes_manager.request_attributes[TITLE_ATTR] = title
-    except Exception:
-        pass
-
-
 class AplResponseInterceptor(AbstractResponseInterceptor):
     """Ajoute la carte APL à toute réponse parlée sur un appareil à écran."""
 
@@ -92,13 +83,9 @@ class AplResponseInterceptor(AbstractResponseInterceptor):
         directives = list(getattr(response, "directives", None) or [])
         if any(isinstance(d, RenderDocumentDirective) for d in directives):
             return
-        try:
-            title = handler_input.attributes_manager.request_attributes.get(TITLE_ATTR)
-        except Exception:
-            title = None
         directives.append(RenderDocumentDirective(
             token=TOKEN,
             document=DOCUMENT,
-            datasources={"reply": {"title": title if isinstance(title, str) and title else "Jeedom", "text": text}},
+            datasources={"reply": {"title": TITLE, "text": text}},
         ))
         response.directives = directives

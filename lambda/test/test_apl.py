@@ -12,31 +12,25 @@ def apl():
     return mod
 
 
-def _hi(with_screen=True, title=None):
+def _hi(with_screen=True):
     interfaces = SimpleNamespace(alexa_presentation_apl=SimpleNamespace() if with_screen else None)
     device = SimpleNamespace(supported_interfaces=interfaces)
     envelope = SimpleNamespace(context=SimpleNamespace(system=SimpleNamespace(device=device)))
-    attrs = {} if title is None else {"apl_title": title}
-    return SimpleNamespace(request_envelope=envelope, attributes_manager=SimpleNamespace(request_attributes=attrs))
+    return SimpleNamespace(request_envelope=envelope, attributes_manager=SimpleNamespace(request_attributes={}))
 
 
 def _response(ssml="<speak>Il fait 21 degrés &amp; humide.</speak>", directives=None):
     return SimpleNamespace(output_speech=SimpleNamespace(ssml=ssml), directives=directives)
 
 
-def test_adds_card_with_speech_and_title(apl):
+def test_adds_card_with_speech_and_skill_name(apl):
     rsp = _response()
-    apl.AplResponseInterceptor().process(_hi(title="température du salon"), rsp)
+    apl.AplResponseInterceptor().process(_hi(), rsp)
     assert len(rsp.directives) == 1
     d = rsp.directives[0]
     assert d.token == apl.TOKEN
-    assert d.datasources == {"reply": {"title": "température du salon", "text": "Il fait 21 degrés & humide."}}
+    assert d.datasources == {"reply": {"title": "premiumAsk", "text": "Il fait 21 degrés & humide."}}
 
-
-def test_default_title(apl):
-    rsp = _response()
-    apl.AplResponseInterceptor().process(_hi(), rsp)
-    assert rsp.directives[0].datasources["reply"]["title"] == "Jeedom"
 
 
 def test_no_screen_no_card(apl):
@@ -69,8 +63,3 @@ def test_document_is_valid_json_and_reads_payload(apl):
     assert '"type": "APL"' in doc
     assert "${payload.reply.text}" in doc and "${payload.reply.title}" in doc
 
-
-def test_set_title(apl):
-    hi = _hi()
-    apl.set_title(hi, "quelle heure est-il")
-    assert hi.attributes_manager.request_attributes["apl_title"] == "quelle heure est-il"
