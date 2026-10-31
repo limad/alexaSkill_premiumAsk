@@ -109,7 +109,6 @@
           ],
           "samples": [
             "{Dates}",
-            "{Times}",
             "a las {Times}",
             "el {Dates}",
             "para el {Dates}",
