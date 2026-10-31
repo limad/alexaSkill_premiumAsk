@@ -14,7 +14,7 @@
     "WELCOME_MESSAGE": "Welcome to {}. Input text is: {}",
     "HINT_TEXT": "say yes, no, or stop",
     "NO_MATCH": "Sorry, I couldn't find a command matching your request.",
-    "NO_QUESTION": "There is no pending question. To control Jeedom by voice, say: Alexa, ask frida assistant."
+    "NO_QUESTION": "There is no pending question."
   },
   "de": {
     "ERROR_401": "Ich habe scheinbar keine Berechtigungen für die verbindung zu Jeedom. Bitte prüfe deinen H A Benutzer oder Access Token.",
@@ -31,7 +31,7 @@
     "WELCOME_MESSAGE": "Willkommen bei {}. Der input text ist: {}",
     "HINT_TEXT": "sagen Sie ja, nein oder stopp",
     "NO_MATCH": "Ich konnte keinen passenden Befehl für Ihre Anfrage finden.",
-    "NO_QUESTION": "Es gibt keine offene Frage. Um Jeedom per Sprache zu steuern, sage: Alexa, frage frida assistent."
+    "NO_QUESTION": "Es gibt keine offene Frage."
   },
   "fr": {
     "ERROR_401": "Il semblerait que je ne sois pas authorisée à accéder à Jeedom, veuillez verifier la configuration de votre skill, la clé API et essayez à nouveau.",
@@ -48,7 +48,7 @@
     "WELCOME_MESSAGE": "Bienvenue sur {}. Le champ texte est: {}",
     "HINT_TEXT": "dire oui, non, ou arrête",
     "NO_MATCH": "Aucune commande trouvée pour cette demande.",
-    "NO_QUESTION": "Aucune question en attente. Pour piloter Jeedom à la voix, dites : Alexa, demande à assistant frida."
+    "NO_QUESTION": "Aucune question en attente."
   },
   "it": {
     "ERROR_401": "Problema con le autorizzazioni di accesso ad Jeedom: controllare l'account collegato o eventuali token utilizzati e riprovare",
@@ -65,7 +65,7 @@
     "WELCOME_MESSAGE": "Benvenuto su {}. Il testo specificato e': {}",
     "HINT_TEXT": "dire sì, no o fermati",
     "NO_MATCH": "Nessun comando trovato per questa richiesta.",
-    "NO_QUESTION": "Nessuna domanda in attesa. Per controllare Jeedom con la voce, di': Alexa, chiedi a assistente frida."
+    "NO_QUESTION": "Nessuna domanda in attesa."
   },
   "pt": {
     "ERROR_401": "Parece que eu não estou autorizada a acessar seu Jeedom. Verifique as credenciais e tente novamente.",
@@ -82,7 +82,7 @@
     "WELCOME_MESSAGE": "Bem vindo ao {}. A entrada de texto é: {}",
     "HINT_TEXT": "diga sim, não ou pare",
     "NO_MATCH": "Nenhum comando encontrado para esta solicitação.",
-    "NO_QUESTION": "Nenhuma pergunta pendente. Para controlar o Jeedom por voz, diga: Alexa, pergunte ao assistente frida."
+    "NO_QUESTION": "Nenhuma pergunta pendente."
   },
   "es": {
     "ERROR_401": "Parece que no tengo permisos para acceder a Jeedom. Por favor, comprueba el enlace de cuenta o el token de acceso y vuelve a intentarlo.",
@@ -99,7 +99,7 @@
     "WELCOME_MESSAGE": "Bienvenido a {}. El texto de entrada es: {}",
     "HINT_TEXT": "diga sí, no o para",
     "NO_MATCH": "No se encontró ningún comando para esta solicitud.",
-    "NO_QUESTION": "No hay ninguna pregunta pendiente. Para controlar Jeedom con la voz, di: Alexa, pregunta a asistente frida."
+    "NO_QUESTION": "No hay ninguna pregunta pendiente."
   },
   "fr-FR": {
     "SKILL_NAME": "Actionable notifications"
