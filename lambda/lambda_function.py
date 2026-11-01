@@ -8,7 +8,6 @@ TOKEN = ""          # Token account-linking longue durée (laisser vide pour ré
 CAN_POST = True
 
 # ─── Built-in imports ───────────────────────────────────────────────────────
-import importlib.util
 import json
 import logging
 import os
@@ -83,11 +82,13 @@ from schemas import QuestionState, QuestionStateError
 def load_config(path):
     """Lit config.py sans jamais lever d'exception : une faute de frappe laisse les
     réglages vides, et le skill répond son message d'erreur au lieu de planter."""
+    # Lu et exécuté directement (pas d'import) : aucun cache __pycache__ qui pourrait
+    # resservir une ancienne version du fichier réécrit dans la même seconde.
     try:
-        spec = importlib.util.spec_from_file_location("skill_config", path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return {k: v for k, v in vars(module).items() if k.isupper()}
+        with open(path, encoding="utf-8") as f:
+            values = {}
+            exec(compile(f.read(), path, "exec"), values)
+        return {k: v for k, v in values.items() if k.isupper()}
     except Exception as exc:  # SyntaxError, fichier absent…
         logging.getLogger(__name__).error("config.py illisible : %s", exc)
         return {}

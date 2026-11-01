@@ -24,3 +24,9 @@ def test_fichier_absent(tmp_path):
 def test_config_du_depot_lisible():
     cfg = lf.load_config(lf.os.path.join(lf.os.path.dirname(lf.__file__), "config.py"))
     assert set(cfg) == {"JEEDOM_URL", "JEEDOM_APIKEY", "VERIFY_SSL", "DEBUG"}
+
+
+def test_reecriture_meme_taille_relue(tmp_path):
+    # Deux réécritures de même longueur dans la même seconde : pas de valeur en cache.
+    assert lf.load_config(_write(tmp_path, 'JEEDOM_APIKEY = "aaa"\n'))["JEEDOM_APIKEY"] == "aaa"
+    assert lf.load_config(_write(tmp_path, 'JEEDOM_APIKEY = "bbb"\n'))["JEEDOM_APIKEY"] == "bbb"
