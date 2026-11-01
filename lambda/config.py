@@ -1,6 +1,7 @@
-# Fichier auto-généré au déploiement par alexaapiv2 (plugin Jeedom).
-# Les valeurs ci-dessous sont des placeholders pour clone/dev local uniquement.
-JEEDOM_URL = "https://xxx.Jeedom.fr/"
-APIKEY = ""
-DEBUG = False       # True = logs verbeux (traces vocales, noms d'appareils) — ne pas activer en prod
-VERIFY_SSL = False  # True = exige un certificat HTTPS valide côté Jeedom; False si certificat auto-signé / HTTP
+# -*- coding: utf-8 -*-
+# Réglages du skill premiumAsk. Le plugin alexaapiv2 réécrit ce fichier à chaque déploiement.
+# Installation à la main : valeurs entre guillemets ; True / False sans guillemets.
+JEEDOM_URL = ""       # adresse externe de Jeedom, ex. "https://jeedom.example.com"
+JEEDOM_APIKEY = ""    # clé API du plugin Alexa (alexaapiv2), jamais celle du core
+VERIFY_SSL = True     # False si le certificat HTTPS de Jeedom est auto-signé
+DEBUG = False         # True = journaux détaillés (traces vocales) : à éviter en usage normal

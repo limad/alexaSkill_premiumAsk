@@ -40,7 +40,7 @@ jobs:
 
       - name: Validate JSON
         run: |
-          for f in interactionModels/custom/*.json skill-package/skill.json; do
+          for f in skill-package/interactionModels/custom/*.json skill-package/skill.json; do
             [ -f "$f" ] || continue
             python -m json.tool "$f" > /dev/null && echo "✓ $f" || { echo "✗ $f"; exit 1; }
           done

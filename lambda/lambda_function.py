@@ -8,8 +8,10 @@ TOKEN = ""          # Token account-linking longue durée (laisser vide pour ré
 CAN_POST = True
 
 # ─── Built-in imports ───────────────────────────────────────────────────────
+import importlib.util
 import json
 import logging
+import os
 from typing import Optional, Union
 
 # ─── 3rd-party imports ──────────────────────────────────────────────────────
@@ -65,7 +67,6 @@ from ask_sdk_model.slu.entityresolution import StatusCode
 # ─── Local imports ──────────────────────────────────────────────────────────
 import prompts
 import apl
-from config import APIKEY, DEBUG, JEEDOM_URL, VERIFY_SSL
 from const import (
     RESPONSE_DATE_TIME,
     RESPONSE_DURATION,
@@ -78,8 +79,28 @@ from const import (
 )
 from schemas import QuestionState, QuestionStateError
 
+# ─── Réglages (config.py) ───────────────────────────────────────────────────
+def load_config(path):
+    """Lit config.py sans jamais lever d'exception : une faute de frappe laisse les
+    réglages vides, et le skill répond son message d'erreur au lieu de planter."""
+    try:
+        spec = importlib.util.spec_from_file_location("skill_config", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return {k: v for k, v in vars(module).items() if k.isupper()}
+    except Exception as exc:  # SyntaxError, fichier absent…
+        logging.getLogger(__name__).error("config.py illisible : %s", exc)
+        return {}
+
+
+CONFIG = load_config(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.py"))
+JEEDOM_URL = str(CONFIG.get("JEEDOM_URL") or "").rstrip("/")
+# APIKEY : nom écrit par les versions du plugin antérieures à 11/2026
+APIKEY = str(CONFIG.get("JEEDOM_APIKEY") or CONFIG.get("APIKEY") or "")
+VERIFY_SSL = bool(CONFIG.get("VERIFY_SSL", True))
+DEBUG = bool(CONFIG.get("DEBUG", False))
+
 # ─── URLs pré-calculées ─────────────────────────────────────────────────────
-JEEDOM_URL = JEEDOM_URL.rstrip("/")
 QUESTION_URL = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askQuestion.php"
 RESPONSE_URL = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askResponse.php?command=reponseASK"
 LOG_URL      = f"{JEEDOM_URL}/plugins/alexaapiv2/core/php/askResponse.php?command=log"

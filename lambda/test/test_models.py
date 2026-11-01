@@ -1,5 +1,5 @@
 """
-Tests structurels des modèles d'interaction (interactionModels/custom/*.json).
+Tests structurels des modèles d'interaction (skill-package/interactionModels/custom/*.json).
 
 Le skill ne sert qu'à répondre aux questions des scénarios Jeedom : chaque
 locale définit les intents de réponse (oui/non, nombre, durée, date, choix,
@@ -36,7 +36,7 @@ EXPECTED_SLOTS = {
 # Réponses nues indispensables (« douze », « dix minutes », « demain », « rouge »)
 BARE_SAMPLES = {"Number": "{Numbers}", "Duration": "{Durations}", "Date": "{Dates}", "String": "{Strings}"}
 
-MODELS_DIR = Path(__file__).parent.parent.parent / "interactionModels" / "custom"
+MODELS_DIR = Path(__file__).parent.parent.parent / "skill-package" / "interactionModels" / "custom"
 
 
 def _load_model(locale: str) -> dict:
