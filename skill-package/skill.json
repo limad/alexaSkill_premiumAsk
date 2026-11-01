@@ -36,10 +36,8 @@
         "fr-FR": {},
         "fr-CA": {},
         "de-DE": {},
-        "en-AU": {},
         "en-CA": {},
         "en-GB": {},
-        "en-IN": {},
         "en-US": {},
         "es-ES": {}
       },
@@ -106,20 +104,6 @@
             "Hausautomation"
           ]
         },
-        "en-AU": {
-          "name": "premiumAsk",
-          "summary": "Answer your Jeedom scenarios' questions by voice.",
-          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
-          "examplePhrases": [
-            "Alexa, open jeedom",
-            "Alexa, ask jeedom to repeat",
-            "Alexa, tell jeedom yes"
-          ],
-          "keywords": [
-            "Jeedom",
-            "home automation"
-          ]
-        },
         "en-CA": {
           "name": "premiumAsk",
           "summary": "Answer your Jeedom scenarios' questions by voice.",
@@ -135,20 +119,6 @@
           ]
         },
         "en-GB": {
-          "name": "premiumAsk",
-          "summary": "Answer your Jeedom scenarios' questions by voice.",
-          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
-          "examplePhrases": [
-            "Alexa, open jeedom",
-            "Alexa, ask jeedom to repeat",
-            "Alexa, tell jeedom yes"
-          ],
-          "keywords": [
-            "Jeedom",
-            "home automation"
-          ]
-        },
-        "en-IN": {
           "name": "premiumAsk",
           "summary": "Answer your Jeedom scenarios' questions by voice.",
           "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
