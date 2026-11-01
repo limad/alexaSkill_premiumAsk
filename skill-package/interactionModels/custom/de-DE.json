@@ -1,0 +1,161 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": [
+            "ja",
+            "jawohl",
+            "genau",
+            "ok",
+            "okay",
+            "sicher",
+            "richtig",
+            "stimmt",
+            "klar",
+            "natürlich",
+            "einverstanden"
+          ]
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": [
+            "nein",
+            "nö",
+            "überhaupt nicht",
+            "negativ",
+            "niemals",
+            "nein danke",
+            "auf keinen fall",
+            "abbrechen"
+          ]
+        },
+        {
+          "name": "AMAZON.RepeatIntent",
+          "samples": [
+            "wiederhole",
+            "noch einmal",
+            "nochmal",
+            "das habe ich nicht verstanden",
+            "wie bitte"
+          ]
+        },
+        {
+          "name": "Number",
+          "slots": [
+            {
+              "name": "Numbers",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "Ordinal",
+              "type": "AMAZON.Ordinal"
+            }
+          ],
+          "samples": [
+            "{Numbers}",
+            "es ist {Numbers}",
+            "die zahl {Numbers}",
+            "nummer {Numbers}",
+            "der {Ordinal}",
+            "den {Ordinal}"
+          ]
+        },
+        {
+          "name": "Duration",
+          "slots": [
+            {
+              "name": "Durations",
+              "type": "AMAZON.DURATION"
+            }
+          ],
+          "samples": [
+            "{Durations}",
+            "für {Durations}",
+            "während {Durations}",
+            "für eine dauer von {Durations}",
+            "in {Durations}"
+          ]
+        },
+        {
+          "name": "Date",
+          "slots": [
+            {
+              "name": "Dates",
+              "type": "AMAZON.DATE"
+            },
+            {
+              "name": "Times",
+              "type": "AMAZON.TIME"
+            }
+          ],
+          "samples": [
+            "{Dates}",
+            "{Times}",
+            "um {Times}",
+            "am {Dates}",
+            "für {Dates}",
+            "für {Times}",
+            "{Dates} um {Times}",
+            "am {Dates} um {Times}"
+          ]
+        },
+        {
+          "name": "Select",
+          "slots": [
+            {
+              "name": "Selections",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "ich wähle {Selections}",
+            "ich nehme {Selections}",
+            "wähle {Selections}",
+            "nimm {Selections}",
+            "meine wahl ist {Selections}",
+            "ich entscheide mich für {Selections}"
+          ]
+        },
+        {
+          "name": "String",
+          "slots": [
+            {
+              "name": "Strings",
+              "type": "AMAZON.Person"
+            }
+          ],
+          "samples": [
+            "{Strings}",
+            "es ist {Strings}",
+            "ich sage {Strings}",
+            "die antwort ist {Strings}",
+            "meine antwort ist {Strings}"
+          ]
+        }
+      ],
+      "invocationName": "jeedom"
+    }
+  }
+}

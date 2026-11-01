@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Locales supportées en production
-SUPPORTED_LOCALES = ["en-AU", "en-CA", "en-GB", "en-IN", "en-US", "es-ES", "fr-CA", "fr-FR"]
+SUPPORTED_LOCALES = ["de-DE", "en-AU", "en-CA", "en-GB", "en-IN", "en-US", "es-ES", "fr-CA", "fr-FR"]
 
 # Intents que CHAQUE locale doit définir
 REQUIRED_INTENTS = {

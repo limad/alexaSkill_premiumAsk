@@ -33,8 +33,15 @@
       "isChildDirected": false,
       "isExportCompliant": true,
       "locales": {
+        "fr-FR": {},
+        "fr-CA": {},
+        "de-DE": {},
         "en-AU": {},
-        "en-CA": {}
+        "en-CA": {},
+        "en-GB": {},
+        "en-IN": {},
+        "en-US": {},
+        "es-ES": {}
       },
       "shoppingKit": {
         "isAmazonAssociatesOnAlexaEnabled": false,
@@ -57,64 +64,131 @@
       "distributionCountries": [],
       "isAvailableWorldwide": true,
       "locales": {
-        "en-US": {
-          "name": "premiumAsk"
-        },
-        "en-CA": {
-          "description": "skill Ask pour AlexaPremium",
+        "fr-FR": {
+          "name": "premiumAsk",
+          "summary": "Répondez à voix haute aux questions de vos scénarios Jeedom.",
+          "description": "Skill du plugin Jeedom Alexa Premium : un scénario Jeedom pose une question sur votre Echo et reçoit votre réponse (oui, non, nombre, durée, date, choix ou texte). Pour commander Jeedom à la voix, utilisez le skill Frida.",
           "examplePhrases": [
-            "Alexa, ouvre jeedom",
-            "Alexa, demande à jeedom d\u0027allumer la lumière du salon",
-            "Alexa, demande à jeedom de lancer le scénario matin"
+            "Alexa, ouvre ma jeebox",
+            "Alexa, demande à ma jeebox de répéter",
+            "Alexa, dis à ma jeebox oui"
           ],
           "keywords": [
             "Jeedom",
-            "Ask"
-          ],
-          "name": "premiumAsk",
-          "summary": "AlexaPremium skill Ask"
-        },
-        "en-IN": {
-          "name": "premiumAsk"
-        },
-        "es-ES": {
-          "name": "premiumAsk"
-        },
-        "en-AU": {
-          "description": "skill Ask pour AlexaPremium",
-          "examplePhrases": [
-            "Alexa, ouvre jeedom",
-            "Alexa, demande à jeedom d\u0027allumer la lumière du salon",
-            "Alexa, demande à jeedom de lancer le scénario matin"
-          ],
-          "keywords": [],
-          "name": "premiumAsk",
-          "summary": "AlexaPremium skill Ask"
-        },
-        "fr-FR": {
-          "description": "skill Ask pour AlexaPremium",
-          "examplePhrases": [
-            "Alexa, ouvre jeedom",
-            "Alexa, demande à jeedom d\u0027allumer la lumière du salon",
-            "Alexa, demande à jeedom de lancer le scénario matin"
-          ],
-          "keywords": [],
-          "name": "premiumAsk",
-          "summary": "AlexaPremium skill Ask"
+            "domotique"
+          ]
         },
         "fr-CA": {
-          "description": "skill Ask pour AlexaPremium",
-          "examplePhrases": [
-            "Alexa, ouvre jeedom",
-            "Alexa, demande à jeedom d\u0027allumer la lumière du salon",
-            "Alexa, demande à jeedom de lancer le scénario matin"
-          ],
-          "keywords": [],
           "name": "premiumAsk",
-          "summary": "AlexaPremium skill Ask"
+          "summary": "Répondez à voix haute aux questions de vos scénarios Jeedom.",
+          "description": "Skill du plugin Jeedom Alexa Premium : un scénario Jeedom pose une question sur votre Echo et reçoit votre réponse (oui, non, nombre, durée, date, choix ou texte). Pour commander Jeedom à la voix, utilisez le skill Frida.",
+          "examplePhrases": [
+            "Alexa, ouvre ma jeebox",
+            "Alexa, demande à ma jeebox de répéter",
+            "Alexa, dis à ma jeebox oui"
+          ],
+          "keywords": [
+            "Jeedom",
+            "domotique"
+          ]
+        },
+        "de-DE": {
+          "name": "premiumAsk",
+          "summary": "Beantworte die Fragen deiner Jeedom-Szenarien per Sprache.",
+          "description": "Skill des Jeedom-Plugins Alexa Premium: Ein Jeedom-Szenario stellt auf deinem Echo eine Frage und erhält deine Antwort (ja, nein, Zahl, Dauer, Datum, Auswahl oder Text). Um Jeedom per Sprache zu steuern, verwende den Skill Frida.",
+          "examplePhrases": [
+            "Alexa, öffne jeedom",
+            "Alexa, starte jeedom",
+            "Alexa, sag jeedom ja"
+          ],
+          "keywords": [
+            "Jeedom",
+            "Hausautomation"
+          ]
+        },
+        "en-AU": {
+          "name": "premiumAsk",
+          "summary": "Answer your Jeedom scenarios' questions by voice.",
+          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
+          "examplePhrases": [
+            "Alexa, open jeedom",
+            "Alexa, ask jeedom to repeat",
+            "Alexa, tell jeedom yes"
+          ],
+          "keywords": [
+            "Jeedom",
+            "home automation"
+          ]
+        },
+        "en-CA": {
+          "name": "premiumAsk",
+          "summary": "Answer your Jeedom scenarios' questions by voice.",
+          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
+          "examplePhrases": [
+            "Alexa, open jeedom",
+            "Alexa, ask jeedom to repeat",
+            "Alexa, tell jeedom yes"
+          ],
+          "keywords": [
+            "Jeedom",
+            "home automation"
+          ]
         },
         "en-GB": {
-          "name": "premiumAsk"
+          "name": "premiumAsk",
+          "summary": "Answer your Jeedom scenarios' questions by voice.",
+          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
+          "examplePhrases": [
+            "Alexa, open jeedom",
+            "Alexa, ask jeedom to repeat",
+            "Alexa, tell jeedom yes"
+          ],
+          "keywords": [
+            "Jeedom",
+            "home automation"
+          ]
+        },
+        "en-IN": {
+          "name": "premiumAsk",
+          "summary": "Answer your Jeedom scenarios' questions by voice.",
+          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
+          "examplePhrases": [
+            "Alexa, open jeedom",
+            "Alexa, ask jeedom to repeat",
+            "Alexa, tell jeedom yes"
+          ],
+          "keywords": [
+            "Jeedom",
+            "home automation"
+          ]
+        },
+        "en-US": {
+          "name": "premiumAsk",
+          "summary": "Answer your Jeedom scenarios' questions by voice.",
+          "description": "Skill of the Jeedom Alexa Premium plugin: a Jeedom scenario asks a question on your Echo and receives your answer (yes, no, number, duration, date, choice or text). To control Jeedom by voice, use the Frida skill.",
+          "examplePhrases": [
+            "Alexa, open jeedom",
+            "Alexa, ask jeedom to repeat",
+            "Alexa, tell jeedom yes"
+          ],
+          "keywords": [
+            "Jeedom",
+            "home automation"
+          ]
+        },
+        "es-ES": {
+          "name": "premiumAsk",
+          "summary": "Responde con la voz a las preguntas de tus escenarios de Jeedom.",
+          "description": "Skill del plugin Jeedom Alexa Premium: un escenario de Jeedom hace una pregunta en tu Echo y recibe tu respuesta (sí, no, número, duración, fecha, opción o texto). Para controlar Jeedom con la voz, usa el skill Frida.",
+          "examplePhrases": [
+            "Alexa, abre jeedom",
+            "Alexa, pide a jeedom que repita",
+            "Alexa, di a jeedom sí"
+          ],
+          "keywords": [
+            "Jeedom",
+            "domótica"
+          ]
         }
       },
       "testingInstructions": "{\"ask_dist_username\":\"\",\"ask_dist_password\":\"\",\"ask_dist_testing_instructions\":\"{\\\"ask_dist_username\\\":\\\"\\\",\\\"ask_dist_password\\\":\\\"\\\"}\"}"
