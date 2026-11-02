@@ -5,13 +5,14 @@
 
 CODE_VERS = 0.4
 TOKEN = ""          # Token account-linking longue durée (laisser vide pour récupération auto)
-CAN_POST = True
 
 # ─── Built-in imports ───────────────────────────────────────────────────────
 import json
 import logging
 import os
+import time
 from typing import Optional, Union
+from xml.sax.saxutils import escape
 
 # ─── 3rd-party imports ──────────────────────────────────────────────────────
 import re
@@ -20,29 +21,30 @@ from urllib3 import HTTPResponse
 from urllib3.util.retry import Retry
 
 
-# Parseur ISO-8601 duration (remplace isodate) — couvre PT#H#M#S, PxxY/M/W/D, combiné
+# Parseur ISO-8601 duration (remplace isodate) — couvre PT#H#M#S, PxxY/M/W/D, combiné,
+# avec décimales (« une demi-heure » peut arriver en PT0.5H).
+_N = r"\d+(?:[.,]\d+)?"
 _ISO_DUR_RE = re.compile(
-    r"^P(?:(?P<y>\d+)Y)?(?:(?P<mo>\d+)M)?(?:(?P<w>\d+)W)?(?:(?P<d>\d+)D)?"
-    r"(?:T(?:(?P<h>\d+)H)?(?:(?P<m>\d+)M)?(?:(?P<s>\d+(?:\.\d+)?)S)?)?$"
+    rf"^P(?:(?P<y>{_N})Y)?(?:(?P<mo>{_N})M)?(?:(?P<w>{_N})W)?(?:(?P<d>{_N})D)?"
+    rf"(?:T(?:(?P<h>{_N})H)?(?:(?P<m>{_N})M)?(?:(?P<s>{_N})S)?)?$"
 )
 
 
-def _parse_iso_duration_seconds(duration: Optional[str]) -> float:
-    """Parse un ISO-8601 duration en secondes (années=365j, mois=30j — approximation)."""
-    if not duration:
-        return 0.0
-    m = _ISO_DUR_RE.match(duration)
-    if not m:
-        return 0.0
-    g = m.groupdict()
+def _parse_iso_duration_seconds(duration: Optional[str]) -> Optional[float]:
+    """Parse un ISO-8601 duration en secondes (années=365j, mois=30j — approximation).
+    None si la valeur est absente ou illisible : la question est alors reposée."""
+    m = _ISO_DUR_RE.match(duration or "")
+    if not duration or not m or duration in ("P", "PT"):
+        return None
+    g = {k: float(v.replace(",", ".")) if v else 0.0 for k, v in m.groupdict().items()}
     total = 0.0
-    total += int(g["y"] or 0) * 365 * 86400
-    total += int(g["mo"] or 0) * 30 * 86400
-    total += int(g["w"] or 0) * 7 * 86400
-    total += int(g["d"] or 0) * 86400
-    total += int(g["h"] or 0) * 3600
-    total += int(g["m"] or 0) * 60
-    total += float(g["s"] or 0)
+    total += g["y"] * 365 * 86400
+    total += g["mo"] * 30 * 86400
+    total += g["w"] * 7 * 86400
+    total += g["d"] * 86400
+    total += g["h"] * 3600
+    total += g["m"] * 60
+    total += g["s"]
     return total
 
 from ask_sdk_core.dispatch_components import (
@@ -117,8 +119,12 @@ logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 # Jamais de relance d'un POST : Jeedom a pu déjà exécuter la commande (un LLM à 4 s
 # dépasse le read timeout de 3 s → la même phrase repartait une 2e fois).
 # Compat urllib3 : `allowed_methods` (≥1.26) / `method_whitelist` (1.25.x).
+# Relance sur code 5xx seulement (connect=0, read=0) : un délai dépassé n'est jamais
+# relancé, sinon il compterait deux fois dans le budget de la requête.
 _RETRY_KW = dict(
     total=1,
+    connect=0,
+    read=0,
     backoff_factor=0.3,
     status_forcelist=(500, 502, 503, 504),
 )
@@ -127,11 +133,15 @@ try:
 except TypeError:
     _RETRY = Retry(method_whitelist=frozenset(["GET"]), **_RETRY_KW)
 
-POST_TIMEOUT = urllib3.Timeout(connect=2.0, read=5.5)
+# Budget total d'une requête Alexa (lecture de la question + envoi de la réponse) :
+# Alexa coupe à 8 s, on garde une marge pour construire la réponse.
+REQUEST_BUDGET = 7.0
+GET_CAP = 3.0       # lecture de alexaAskQuestion.php (rapide : un fichier)
+LOG_CAP = 1.0       # journal best-effort, jamais aux dépens de la réponse
+MIN_LEFT = 0.5      # en dessous, on ne tente plus d'appel
 
 HTTP = urllib3.PoolManager(
     cert_reqs="CERT_REQUIRED" if VERIFY_SSL else "CERT_NONE",
-    timeout=urllib3.Timeout(connect=2.0, read=3.0),
     retries=_RETRY,
     maxsize=4,
 )
@@ -159,25 +169,9 @@ def _string_to_bool(value, default: bool = False) -> bool:
     return default
 
 
-def _get_resolved_slot(handler_input, slot_name: str) -> Optional[str]:
-    """
-    Retourne la valeur résolue via entity resolution Alexa si disponible
-    (cas slot JeeCommand → valeur canonique Jeedom), sinon la valeur brute.
-    Fallback transparent : si aucune résolution, se comporte comme get_slot_value().
-    """
-    slot = get_slot(handler_input, slot_name)
-    if slot and slot.resolutions:
-        try:
-            for auth in (slot.resolutions.resolutions_per_authority or []):
-                if auth.status and auth.status.code and auth.status.code.value == "ER_SUCCESS_MATCH":
-                    if auth.values:
-                        resolved = auth.values[0].value.name
-                        if resolved:
-                            logger.debug("slot %s resolved: '%s' → '%s'", slot_name, slot.value, resolved)
-                            return resolved
-        except (AttributeError, IndexError, TypeError):
-            pass
-    return slot.value if slot else None
+def _ssml(text) -> str:
+    """Texte venu de Jeedom ou de l'utilisateur, prêt pour <speak> : &, < et > en entités."""
+    return escape(str(text or ""))
 
 
 def _no_question_response(handler_input, jee):
@@ -203,6 +197,26 @@ def _qa_guard_no_question(handler_input, jee, label: str):
         return None
     logger.info("%s sans question en attente", label)
     return _no_question_response(handler_input, jee)
+
+
+def _reask(handler_input, jee, label: str):
+    """
+    Réponse incomprise (slot vide, valeur illisible, intention inconnue) : on repose la
+    question au lieu d'envoyer « pas de réponse » au scénario. Si l'utilisateur ne
+    répond toujours pas, Alexa relance puis envoie SessionEndedRequest
+    (EXCEEDED_MAX_REPROMPTS) et le scénario reçoit alors « pas de réponse ».
+    """
+    if not isinstance(jee.jee_state, QuestionState) or not jee.jee_state.text:
+        return _no_question_response(handler_input, jee)
+    logger.info("%s incompris : question reposée", label)
+    data = handler_input.attributes_manager.request_attributes.get("_", {})
+    template = data.get(prompts.ERROR_ACOUSTIC, "{}")
+    builder = (handler_input.response_builder
+               .speak(template.format(jee.jee_state.text))
+               .ask(jee.jee_state.text)
+               .set_should_end_session(False))
+    _add_hint(builder, data.get(prompts.HINT_TEXT, "dire arrête"))
+    return builder.response
 
 
 def _add_hint(response_builder, text: str):
@@ -250,6 +264,7 @@ class JeeAsk:
         self.handler_input = handler_input
         self.jee_state = None
         self.language_strings = {}
+        self._deadline = time.monotonic() + REQUEST_BUDGET
 
         if handler_input is not None:
             self.language_strings = handler_input.attributes_manager.request_attributes.get("_", {})
@@ -293,19 +308,35 @@ class JeeAsk:
         logger.error("Jeedom HTTP %s — see CloudWatch for details", st)
         if DEBUG:
             logger.debug("error body: %s", response.data)
-        self.post_jee_log(speak)
+        if st != 401:  # clé refusée : le journal serait refusé lui aussi
+            self.post_jee_log(speak)
         return speak
 
+    def _left(self) -> float:
+        return self._deadline - time.monotonic()
+
+    def _timeout(self, cap: Optional[float] = None) -> Optional[urllib3.Timeout]:
+        """Délai total (connexion comprise) pris sur le budget restant, None s'il est épuisé."""
+        left = self._left()
+        if cap is not None:
+            left = min(left, cap)
+        if left < MIN_LEFT:
+            return None
+        return urllib3.Timeout(total=left, connect=min(2.0, left / 2.0))
+
     def _request(self, method: str, url: str, *, body: Optional[dict] = None, extra_headers: Optional[dict] = None,
-                 timeout=None):
-        """Exécute une requête HTTP avec retry/timeout hérités du pool global."""
+                 cap: Optional[float] = None):
+        """Exécute une requête HTTP dans le budget restant (relance 5xx héritée du pool)."""
         headers = self._get_headers()
         if extra_headers:
             headers.update(extra_headers)  # in-place, NE PAS réassigner (dict.update() renvoie None)
+        timeout = self._timeout(cap)
+        if timeout is None:
+            logger.error("Jeedom HTTP : budget de %.1f s épuisé avant %s", REQUEST_BUDGET, method)
+            self.jee_state = QuestionStateError(text=self.language_strings.get(prompts.ERROR_CONFIG, "Jeedom error"))
+            return None
         try:
-            kwargs = {"headers": headers}
-            if timeout is not None:
-                kwargs["timeout"] = timeout
+            kwargs = {"headers": headers, "timeout": timeout}
             if body is not None:
                 kwargs["body"] = json.dumps(body).encode("utf-8")
             response = HTTP.request(method, url, **kwargs)
@@ -326,7 +357,7 @@ class JeeAsk:
 
     # ── pull question (GET askQuestion.php) ─────────────────────────────────
     def get_jeeQuestion(self):
-        response = self._request("GET", QUESTION_URL)
+        response = self._request("GET", QUESTION_URL, cap=GET_CAP)
         if response is None:
             return
 
@@ -357,7 +388,7 @@ class JeeAsk:
         self.jee_state = QuestionState(
             event_id=state.get("event"),
             suppress_confirmation=_string_to_bool(state.get("suppress_confirmation")),
-            text=text,
+            text=_ssml(text),  # dit tel quel dans <speak> : « Volets & lumières ? » sinon rejeté
             deviceSerialNumber=state.get("deviceSerialNumber"),
             textBrut=state.get("textBrut") or "",
         )
@@ -389,8 +420,8 @@ class JeeAsk:
         # Sauvegarder le flag avant l'appel (car `_request` peut remplacer jee_state par une erreur)
         suppress = self.jee_state.suppress_confirmation
         # askResponse.php attend jusqu'à 2,5 s une question suivante avant de répondre :
-        # 3 s ne laissaient presque rien au traitement Jeedom (Alexa coupe à 8 s).
-        response = self._request("POST", RESPONSE_URL, body=body, timeout=POST_TIMEOUT)
+        # le POST reçoit tout le budget restant (Alexa coupe à 8 s).
+        response = self._request("POST", RESPONSE_URL, body=body)
         if response is None:
             # `_request` a mis un QuestionStateError → on dit son text à l'utilisateur
             if isinstance(self.jee_state, QuestionStateError):
@@ -414,12 +445,12 @@ class JeeAsk:
             self.jee_state = QuestionState(
                 event_id=next_q.get("event"),
                 suppress_confirmation=_string_to_bool(next_q.get("suppress_confirmation")),
-                text=next_q["text"],
+                text=_ssml(next_q["text"]),
                 deviceSerialNumber=next_q.get("deviceSerialNumber"),
                 textBrut=next_q.get("textBrut") or "",
             )
             # Retourne la question elle-même comme "réponse" — le handler la speak
-            return next_q["text"]
+            return self.jee_state.text
 
         # Pas de question suivante : flow standard
         if not suppress:
@@ -432,6 +463,9 @@ class JeeAsk:
     # ── log push vers Jeedom ────────────────────────────────────────────────
     def post_jee_log(self, log_text: str, **kwargs):
         """Envoie un log au plugin côté Jeedom (askResponse.php?command=log). Best-effort."""
+        timeout = self._timeout(LOG_CAP)
+        if timeout is None or self._left() < LOG_CAP + 2 * MIN_LEFT:
+            return  # pas le temps : la réponse à l'utilisateur passe avant
         body = {"log": log_text, "code_version": CODE_VERS}
         body.update(kwargs)
         try:
@@ -439,6 +473,8 @@ class JeeAsk:
                 "POST", LOG_URL,
                 headers=self._get_headers(),
                 body=json.dumps(body).encode("utf-8"),
+                timeout=timeout,
+                retries=False,
             )
         except Exception:
             pass  # best-effort — on ne veut JAMAIS que le logging casse le skill
@@ -521,9 +557,7 @@ class NumericIntentHandler(AbstractRequestHandler):
         # « douze » (Numbers) ou « le deuxième » (Ordinal, AMAZON.Ordinal → "2")
         number = get_slot_value(handler_input, "Numbers") or get_slot_value(handler_input, "Ordinal")
         if number in (None, "", "?"):
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Valeur invalide"))
+            return _reask(handler_input, jee, "Numeric")
         return _handle_qa_response(handler_input, jee, jee.post_jee_event(number, RESPONSE_NUMERIC))
 
 
@@ -540,9 +574,7 @@ class StringIntentHandler(AbstractRequestHandler):
             return guard
         strings = (get_slot_value(handler_input, "Strings") or "").strip()
         if not strings:
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris."))
+            return _reask(handler_input, jee, "String")
         return _handle_qa_response(handler_input, jee, jee.post_jee_event(strings, RESPONSE_STRING))
 
 
@@ -560,15 +592,18 @@ class SelectIntentHandler(AbstractRequestHandler):
         data = handler_input.attributes_manager.request_attributes.get("_", {})
         selection = jee.get_value_for_slot("Selections") or get_slot_value(handler_input, "Selections")
         if not selection:
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            return _handle_response(handler_input, data.get(prompts.NO_MATCH, "Je n'ai pas compris votre sélection."))
+            return _reask(handler_input, jee, "Select")
 
-        jee.post_jee_event(selection, RESPONSE_SELECT)
-        confirmation = data.get(prompts.SELECTED, "{}").format(selection)
+        suppress = jee.jee_state.suppress_confirmation
+        spoken = jee.post_jee_event(selection, RESPONSE_SELECT)
+        if isinstance(jee.jee_state, QuestionStateError):
+            # Envoi refusé ou Jeedom injoignable : on le dit, jamais « vous avez choisi ».
+            return _handle_response(handler_input, spoken)
+        confirmation = "" if suppress else data.get(prompts.SELECTED, "{}").format(_ssml(selection))
         # Nouvelle question enchaînée par le scénario (multi-tour)
         if isinstance(jee.jee_state, QuestionState) and jee.jee_state.text:
             return (handler_input.response_builder
-                    .speak(confirmation + " " + jee.jee_state.text)
+                    .speak((confirmation + " " + jee.jee_state.text).strip())
                     .ask(jee.jee_state.text)
                     .set_should_end_session(False)
                     .response)
@@ -585,13 +620,9 @@ class DurationIntentHandler(AbstractRequestHandler):
         guard = _qa_guard_no_question(handler_input, jee, "Duration")
         if guard is not None:
             return guard
-        duration = get_slot_value(handler_input, "Durations")
-        if not duration:
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Durée invalide"))
-
-        seconds = _parse_iso_duration_seconds(duration)
+        seconds = _parse_iso_duration_seconds(get_slot_value(handler_input, "Durations"))
+        if seconds is None:
+            return _reask(handler_input, jee, "Duration")
         speak_output = jee.post_jee_event(seconds, RESPONSE_DURATION)
         return _handle_qa_response(handler_input, jee, speak_output)
 
@@ -610,9 +641,7 @@ class DateTimeIntentHandler(AbstractRequestHandler):
         if guard is not None:
             return guard
         if not date and not time:
-            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-            data = handler_input.attributes_manager.request_attributes.get("_", {})
-            return _handle_response(handler_input, data.get(prompts.ERROR_CONFIG, "Date invalide"))
+            return _reask(handler_input, jee, "Date")
         payload = json.dumps({**self._parse_date(date), **self._parse_time(time)})
         speak_output = jee.post_jee_event(payload, RESPONSE_DATE_TIME)
         return _handle_qa_response(handler_input, jee, speak_output)
@@ -629,20 +658,16 @@ class DateTimeIntentHandler(AbstractRequestHandler):
         out["day"]   = parts[2] if n >= 3 else None
         return out
 
+    # AMAZON.TIME : « hh:mm » ou un moment de la journée (matin, après-midi, soir, nuit).
+    TIME_PERIODS = ("MO", "AF", "EV", "NI")
+
     @staticmethod
     def _parse_time(time: Optional[str]) -> dict:
         out = {"seconds": None, "minute": None, "hour": None}
         if not time:
             return out
-        low = time.lower()
-        if "s" in low:
-            out["seconds"] = low.replace("s", "")
-            return out
-        if "m" in low:
-            out["minute"] = low.replace("m", "")
-            return out
-        if "h" in low:
-            out["hour"] = low.replace("h", "")
+        if time.upper() in DateTimeIntentHandler.TIME_PERIODS:
+            out["period"] = time.upper()  # pas d'heure précise : le scénario choisit
             return out
         parts = time.split(":")
         n = len(parts)
@@ -679,27 +704,35 @@ class HelpIntentHandler(AbstractRequestHandler):
 
 
 class CancelOrStopIntentHandler(AbstractRequestHandler):
+    """« Stop », « annule », « accueil » : ferme la session. Une question en attente reçoit
+    « pas de réponse » ici : quand le skill ferme lui-même la session, Alexa n'envoie pas
+    de SessionEndedRequest."""
+    INTENTS = ("AMAZON.CancelIntent", "AMAZON.StopIntent", "AMAZON.NavigateHomeIntent")
+
     def can_handle(self, handler_input):
-        return (
-            is_intent_name("AMAZON.CancelIntent")(handler_input)
-            or is_intent_name("AMAZON.StopIntent")(handler_input)
-        )
+        return any(is_intent_name(name)(handler_input) for name in self.INTENTS)
 
     def handle(self, handler_input):
         logger.info("Cancel/Stop Intent")
+        jee = JeeAsk(handler_input)
+        if isinstance(jee.jee_state, QuestionState):
+            jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
         data = handler_input.attributes_manager.request_attributes.get("_", {})
-        return _handle_response(handler_input, data.get(prompts.STOP_MESSAGE, "Au revoir"))
+        return (handler_input.response_builder
+                .speak(data.get(prompts.STOP_MESSAGE, "Au revoir"))
+                .set_should_end_session(True)
+                .response)
 
 
 class FallbackHandler(AbstractRequestHandler):
+    """AMAZON.FallbackIntent, et toute intention sans handler (enregistré en dernier) :
+    la question en attente est reposée, rien n'est envoyé au scénario."""
     def can_handle(self, handler_input):
-        return is_intent_name("AMAZON.FallbackIntent")(handler_input)
+        return is_request_type("IntentRequest")(handler_input)
 
     def handle(self, handler_input):
-        logger.info("Fallback")
-        jee = JeeAsk(handler_input)
-        jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
-        return handler_input.response_builder.response
+        logger.info("Fallback (%s)", get_intent_name(handler_input))
+        return _reask(handler_input, JeeAsk(handler_input), "Fallback")
 
 
 class SessionEndedRequestHandler(AbstractRequestHandler):
@@ -717,16 +750,6 @@ class SessionEndedRequestHandler(AbstractRequestHandler):
             if isinstance(jee.jee_state, QuestionState):
                 jee.post_jee_event(RESPONSE_NONE, RESPONSE_NONE)
         return handler_input.response_builder.response
-
-
-class IntentReflectorHandler(AbstractRequestHandler):
-    """Dev-only : répète l'intent reçu (utile pour tester le modèle)."""
-    def can_handle(self, handler_input):
-        return is_request_type("IntentRequest")(handler_input)
-
-    def handle(self, handler_input):
-        intent_name = get_intent_name(handler_input)
-        return handler_input.response_builder.speak(f"You just triggered {intent_name}.").response
 
 
 class CatchAllExceptionHandler(AbstractExceptionHandler):
@@ -780,9 +803,8 @@ sb.add_request_handler(DateTimeIntentHandler())
 sb.add_request_handler(RepeatIntentHandler())
 sb.add_request_handler(HelpIntentHandler())
 sb.add_request_handler(CancelOrStopIntentHandler())
-sb.add_request_handler(FallbackHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
-sb.add_request_handler(IntentReflectorHandler())
+sb.add_request_handler(FallbackHandler())  # en dernier : toute intention restante
 
 sb.add_exception_handler(CatchAllExceptionHandler())
 sb.add_global_request_interceptor(LocalizationInterceptor())
