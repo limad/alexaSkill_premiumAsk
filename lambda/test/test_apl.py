@@ -29,7 +29,8 @@ def test_adds_card_with_speech_and_skill_name(apl):
     assert len(rsp.directives) == 1
     d = rsp.directives[0]
     assert d.token == apl.TOKEN
-    assert d.datasources == {"reply": {"title": "premiumAsk", "text": "Il fait 21 degrés & humide."}}
+    # Entité gardée : le composant Text d'APL affiche « & » à partir de &amp;.
+    assert d.datasources == {"reply": {"title": "premiumAsk", "text": "Il fait 21 degrés &amp; humide."}}
 
 
 

@@ -20,7 +20,8 @@ if str(LAMBDA_DIR) not in sys.path:
 
 STRINGS = {"NO_QUESTION": "Aucune question en attente.", "NO_MATCH": "Pas compris.",
            "SELECTED": "Vous avez choisi {}", "ERROR_CONFIG": "Erreur config.",
-           "HINT_TEXT": "dire arrête"}
+           "HINT_TEXT": "dire arrête", "ERROR_ACOUSTIC": "Pas compris... {}",
+           "STOP_MESSAGE": "Au revoir"}
 
 
 @pytest.fixture
@@ -123,13 +124,23 @@ class TestWithQuestion:
         ("Select", "SelectIntentHandler", {}),
         ("String", "StringIntentHandler", {}),
     ])
-    def test_empty_slot_posts_none(self, lambda_mod, intent, handler, slots):
+    def test_empty_slot_asks_again(self, lambda_mod, intent, handler, slots):
+        # Réponse incomprise : la question est reposée, rien n'est envoyé au scénario.
         hi = _make_handler_input(intent, slots)
         with patch.object(lambda_mod, "JeeAsk") as MockJee:
             inst = _mock_jee(MockJee, _question(lambda_mod))
             getattr(lambda_mod, handler)().handle(hi)
-        inst.post_jee_event.assert_called_once_with("ResponseNone", "ResponseNone")
-        assert hi.response_builder.speak.called
+        inst.post_jee_event.assert_not_called()
+        hi.response_builder.speak.assert_called_once_with("Pas compris... Quelle pièce ?")
+        hi.response_builder.ask.assert_called_once_with("Quelle pièce ?")
+        hi.response_builder.set_should_end_session.assert_called_once_with(False)
+
+    def test_unreadable_duration_asks_again(self, lambda_mod):
+        hi = _make_handler_input("Duration", {"Durations": "PTXH"})
+        with patch.object(lambda_mod, "JeeAsk") as MockJee:
+            inst = _mock_jee(MockJee, _question(lambda_mod))
+            lambda_mod.DurationIntentHandler().handle(hi)
+        inst.post_jee_event.assert_not_called()
 
 
 class TestSessionEnded:

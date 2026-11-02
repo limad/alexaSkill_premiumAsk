@@ -6,7 +6,6 @@ parlée est aussi affiché à l'écran, sous le nom du skill.
 Un seul point d'entrée : AplResponseInterceptor, branché en intercepteur de
 réponse global ; les handlers n'ont rien à faire.
 """
-import html
 import re
 
 from ask_sdk_core.dispatch_components import AbstractResponseInterceptor
@@ -63,12 +62,13 @@ def supports_apl(handler_input) -> bool:
 
 
 def speech_text(response) -> str:
-    """Texte brut de la réponse parlée (SSML retiré)."""
+    """Texte de la réponse parlée, balises SSML retirées. Les entités (&amp;, &lt;, &gt;)
+    sont gardées : le composant Text d'APL les attend aussi."""
     speech = getattr(response, "output_speech", None)
     raw = (getattr(speech, "ssml", None) or getattr(speech, "text", None) or "") if speech else ""
     if not isinstance(raw, str):
         return ""
-    return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw))).strip()
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw)).strip()
 
 
 class AplResponseInterceptor(AbstractResponseInterceptor):
